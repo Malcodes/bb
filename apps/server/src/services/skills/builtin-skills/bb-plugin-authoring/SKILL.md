@@ -837,7 +837,7 @@ export default definePluginApp((app) => {
   });
   app.slots.sidebarFooterAction({
     id: "remote",
-    title: "Remote access",
+    title: "bb Cloud",
     icon: "Smartphone",
     run: ({ openSettings }) => openSettings(),
   });
