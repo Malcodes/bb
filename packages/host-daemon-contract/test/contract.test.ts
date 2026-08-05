@@ -1038,10 +1038,10 @@ describe("host-daemon local schemas", () => {
 });
 
 describe("host-daemon command schemas", () => {
-  // Version 78 adds model-scoped/duration-aware provider usage windows and
-  // structured account rate-limit events on top of version 77's
-  // workspace-aware Pi model discovery.
-  it("uses protocol version 78 for provider usage and rate-limit events", () => {
+  // Version 78 adds structured provider account rate-limit events to runtime
+  // session messages on top of version 77's workspace-aware Pi model
+  // discovery. Daemons on protocol 77 cannot send the new event shape.
+  it("uses protocol version 78 for provider rate-limit events", () => {
     expect(HOST_DAEMON_PROTOCOL_VERSION).toBe(78);
   });
 
