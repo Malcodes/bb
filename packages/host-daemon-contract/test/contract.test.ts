@@ -1038,11 +1038,11 @@ describe("host-daemon local schemas", () => {
 });
 
 describe("host-daemon command schemas", () => {
-  // Version 76 lets the daemon report live workspace metadata. Pi model
-  // discovery now also carries the requested workspace path. The bump moves
-  // an enrolled machine onto the new wire contract.
-  it("uses protocol version 77 for workspace-aware Pi model discovery", () => {
-    expect(HOST_DAEMON_PROTOCOL_VERSION).toBe(77);
+  // Version 78 adds model-scoped/duration-aware provider usage windows and
+  // structured account rate-limit events on top of version 77's
+  // workspace-aware Pi model discovery.
+  it("uses protocol version 78 for provider usage and rate-limit events", () => {
+    expect(HOST_DAEMON_PROTOCOL_VERSION).toBe(78);
   });
 
   it("binds Plan cancellation to a required turn id and typed result", () => {
