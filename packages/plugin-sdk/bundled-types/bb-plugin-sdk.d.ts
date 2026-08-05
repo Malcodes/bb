@@ -3051,10 +3051,10 @@ declare const environmentPullRequestResponseSchema: z$1.ZodDiscriminatedUnion<[z
         mergeability: z$1.ZodObject<{
             state: z$1.ZodEnum<{
                 unknown: "unknown";
+                blocked: "blocked";
                 draft: "draft";
                 mergeable: "mergeable";
                 conflicts: "conflicts";
-                blocked: "blocked";
             }>;
             mergeStateStatus: z$1.ZodNullable<z$1.ZodEnum<{
                 BEHIND: "BEHIND";
@@ -3074,13 +3074,13 @@ declare const environmentPullRequestResponseSchema: z$1.ZodDiscriminatedUnion<[z
         }, z$1.core.$strict>;
         attention: z$1.ZodEnum<{
             none: "none";
+            blocked: "blocked";
             merged: "merged";
             draft: "draft";
             closed: "closed";
             changes_requested: "changes_requested";
             review_requested: "review_requested";
             conflicts: "conflicts";
-            blocked: "blocked";
             checks_failed: "checks_failed";
             checks_pending: "checks_pending";
             ready_to_merge: "ready_to_merge";
@@ -5919,11 +5919,11 @@ type HostProviderCliInstallEvent = ProviderCliInstallEvent;
 declare const pluginUpdateCheckEntrySchema: z$1.ZodObject<{
     id: z$1.ZodString;
     outcome: z$1.ZodEnum<{
-        unavailable: "unavailable";
         incompatible: "incompatible";
         current: "current";
         "update-available": "update-available";
         pinned: "pinned";
+        unavailable: "unavailable";
     }>;
     devMode: z$1.ZodOptional<z$1.ZodLiteral<true>>;
     installed: z$1.ZodObject<{
@@ -5990,11 +5990,11 @@ declare const installedPluginSchema: z$1.ZodObject<{
     sourceDisplay: z$1.ZodString;
     updateState: z$1.ZodObject<{
         outcome: z$1.ZodOptional<z$1.ZodEnum<{
-            unavailable: "unavailable";
             incompatible: "incompatible";
             current: "current";
             "update-available": "update-available";
             pinned: "pinned";
+            unavailable: "unavailable";
         }>>;
         availableVersion: z$1.ZodOptional<z$1.ZodString>;
         blockedVersion: z$1.ZodOptional<z$1.ZodString>;
@@ -6094,11 +6094,11 @@ declare const pluginListResponseSchema: z$1.ZodObject<{
         sourceDisplay: z$1.ZodString;
         updateState: z$1.ZodObject<{
             outcome: z$1.ZodOptional<z$1.ZodEnum<{
-                unavailable: "unavailable";
                 incompatible: "incompatible";
                 current: "current";
                 "update-available": "update-available";
                 pinned: "pinned";
+                unavailable: "unavailable";
             }>>;
             availableVersion: z$1.ZodOptional<z$1.ZodString>;
             blockedVersion: z$1.ZodOptional<z$1.ZodString>;
@@ -6200,11 +6200,11 @@ declare const pluginReloadResponseSchema: z$1.ZodObject<{
         sourceDisplay: z$1.ZodString;
         updateState: z$1.ZodObject<{
             outcome: z$1.ZodOptional<z$1.ZodEnum<{
-                unavailable: "unavailable";
                 incompatible: "incompatible";
                 current: "current";
                 "update-available": "update-available";
                 pinned: "pinned";
+                unavailable: "unavailable";
             }>>;
             availableVersion: z$1.ZodOptional<z$1.ZodString>;
             blockedVersion: z$1.ZodOptional<z$1.ZodString>;
@@ -12823,7 +12823,9 @@ type CloudAiResult<T> = {
 interface CloudAiCompleteArgs {
     prompt: string;
     /** JSON Schema (top-level `type: "object"`) the structured result must match. */
-    schema: JsonValue;
+    schema: {
+        [key: string]: JsonValue;
+    };
     /** Host-owned abort signal; the host maps aborts to its timeout semantics. */
     signal: AbortSignal;
 }
