@@ -2244,7 +2244,7 @@ describe("connect CLI", () => {
 
     const off = await harness.runCli(["off"]);
     expect(off.exitCode).toBe(0);
-    expect(off.stdout).toContain("Disconnected");
+    expect(off.stdout).toContain("Disconnected from bb Cloud");
   });
 
   it("unknown subcommands fail with help", async () => {

@@ -74,7 +74,7 @@ function helpText(): string {
     "       bb connect --code <code> --server https://<handle>.getbb.app",
     "",
     "  bb connect status              Show bb Cloud connection status",
-    "  bb connect off                 Disconnect and forget the pairing (re-pairing needs a new code)",
+    "  bb connect off                 Unlink this bb from Cloud (re-pairing needs a new code)",
     "  bb connect ai [on|off]         Show or set the AI features setting",
     "  bb connect expose <port> [--host <name-or-id>]    Share a port from the thread's host",
     "  bb connect unexpose <port> [--host <name-or-id>]  Stop sharing a port on that host",
@@ -123,7 +123,7 @@ export function registerConnectCli(args: {
   bb.cli.register({
     name: "connect",
     summary:
-      "Expose this bb at https://<handle>.getbb.app (pair with --code/--server from the dashboard)",
+      "Set up and manage this bb's Cloud connection (pair with --code/--server from the dashboard)",
     commands: [
       {
         name: "status",
@@ -132,7 +132,7 @@ export function registerConnectCli(args: {
       },
       {
         name: "off",
-        summary: "Disconnect and forget the pairing",
+        summary: "Unlink this bb from Cloud and forget the pairing",
         usage: "bb connect off [--json]",
       },
       {
@@ -184,7 +184,7 @@ export function registerConnectCli(args: {
             exitCode: 0,
             stdout: parsed.flags.has("json")
               ? asJson(status)
-              : "Disconnected\n",
+              : "Disconnected from bb Cloud\n",
           };
         }
         if (first === "ai") {

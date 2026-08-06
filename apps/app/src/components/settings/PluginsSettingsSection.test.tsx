@@ -85,10 +85,17 @@ const SETTINGS_VIEW = {
   values: { greeting: "hello", enabled: true, apiKey: { set: false } },
 };
 
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+
 afterEach(() => {
   cleanup();
   resetPluginSlotStoreForTest();
   vi.unstubAllGlobals();
+  if (originalScrollIntoView === undefined) {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+  } else {
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+  }
 });
 
 describe("PluginSettingsForm", () => {
@@ -330,6 +337,8 @@ describe("PluginSettingsDetail settings gating", () => {
   });
 
   it("renders a slot-only settings page", async () => {
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
     function ConnectSettings() {
       return <div>Custom connect settings</div>;
     }
@@ -368,7 +377,7 @@ describe("PluginSettingsDetail settings gating", () => {
 
     const { wrapper } = createQueryClientTestHarness();
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/settings/plugins/connect#remote"]}>
         <PluginSettingsDetailSection pluginId="connect" />
       </MemoryRouter>,
       { wrapper },
@@ -376,7 +385,11 @@ describe("PluginSettingsDetail settings gating", () => {
 
     expect(await screen.findByText("Remote access")).toBeDefined();
     expect(screen.getByText("Custom connect settings")).toBeDefined();
+    expect(document.getElementById("remote")).not.toBeNull();
     expect(screen.queryByText("This plugin declares no settings.")).toBeNull();
+    await vi.waitFor(() =>
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" }),
+    );
   });
 });
 

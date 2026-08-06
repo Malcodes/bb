@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Frontend coverage for the builtin Connect plugin's settings section, using
+// Frontend coverage for the builtin Cloud plugin's settings sections, using
 // the official plugin app harness instead of a host app or built bundle.
 import { cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -54,7 +54,40 @@ const connected = (overrides: Partial<ConnectStatus> = {}) =>
     ...overrides,
   });
 
-describe("connect settings section", () => {
+describe("Cloud settings sections", () => {
+  it("registers Remote access, Cloud AI, and the phone shortcut separately", () => {
+    expect(
+      app.settingsSections.map((section) => ({
+        id: section.id,
+        title: section.title,
+      })),
+    ).toEqual([
+      { id: "remote-access", title: "Remote access" },
+      { id: "cloud-ai", title: "Cloud AI" },
+    ]);
+    expect(
+      app.sidebarFooterActions.map((action) => ({
+        icon: action.icon,
+        id: action.id,
+        title: action.title,
+      })),
+    ).toEqual([
+      {
+        icon: "Smartphone",
+        id: "remote-access",
+        title: "Remote access",
+      },
+    ]);
+
+    let openedSection: string | undefined;
+    app.sidebarFooterActions[0]!.run({
+      openSettings(options) {
+        openedSection = options?.sectionId;
+      },
+    });
+    expect(openedSection).toBe("remote-access");
+  });
+
   it("auto-submits a normalized 4-4 code and applies live paired status", async () => {
     let currentStatus = status();
     const slot = renderSlot(
@@ -359,8 +392,9 @@ describe("connect settings section", () => {
     fireEvent.click(slot.getByRole("button", { name: "Disconnect" }));
 
     // The dialog names the concrete URL that will die.
-    await slot.findByText("Disconnect remote access?");
+    await slot.findByText("Disconnect from bb Cloud?");
     await slot.findByText(/will stop working on all devices/);
+    await slot.findByText(/Cloud AI will be unavailable/);
     fireEvent.click(slot.getByRole("button", { name: "Disconnect" }));
 
     await waitFor(() =>
@@ -372,5 +406,49 @@ describe("connect settings section", () => {
 
     await slot.findByText("Get a connect code");
     await slot.findByText("Disconnected from bb Cloud");
+  });
+
+  it("shows and persists Cloud AI independently while unpaired", async () => {
+    let currentStatus = status();
+    const slot = renderSlot(
+      app.settingsSections[1]!,
+      {},
+      {
+        rpc: {
+          status: () => currentStatus,
+          setCloudAi: (input: unknown) => {
+            if (
+              input === null ||
+              typeof input !== "object" ||
+              !("enabled" in input) ||
+              typeof input.enabled !== "boolean"
+            ) {
+              throw new Error("invalid setCloudAi input");
+            }
+            currentStatus = status({ cloudAiEnabled: input.enabled });
+            return currentStatus;
+          },
+        },
+      },
+    );
+
+    await slot.findByText("Use Cloud AI");
+    slot.getByText("bb connect");
+    slot.getByText(/Your preference is saved until then/);
+    fireEvent.click(slot.getByRole("switch", { name: "Cloud AI" }));
+
+    await waitFor(() =>
+      expect(slot.rpcCalls).toContainEqual({
+        method: "setCloudAi",
+        input: { enabled: false },
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        (
+          slot.getByRole("switch", { name: "Cloud AI" }) as HTMLButtonElement
+        ).getAttribute("data-state"),
+      ).toBe("unchecked"),
+    );
   });
 });

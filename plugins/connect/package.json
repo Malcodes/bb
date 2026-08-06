@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "bb Cloud (getbb.app) \u2014 access this bb from anywhere at https://<handle>.getbb.app, share ports, and run AI features through your account. Disable to cut off all bb Cloud capabilities.",
+  "description": "Connect this bb to bb Cloud (getbb.app) for remote access, shared ports, and account-backed AI features. Disable to cut off every Cloud capability.",
   "engines": {
     "bb": ">=0.0"
   },
   "bb": {
-    "name": "bb Cloud",
-    "description": "bb Cloud (getbb.app) \u2014 access this bb from anywhere at https://<handle>.getbb.app, share ports, and run AI features through your account. Disable to cut off all bb Cloud capabilities.",
+    "name": "Cloud",
+    "description": "Connect this bb to bb Cloud (getbb.app) for remote access, shared ports, and account-backed AI features. Disable to cut off every Cloud capability.",
     "branding": {
-      "icon": "Smartphone"
+      "icon": "Cloud"
     },
     "server": "./src/server.ts",
     "app": "./app.tsx"

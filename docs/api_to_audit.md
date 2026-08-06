@@ -264,7 +264,8 @@ result falls through to those, and host-side timeouts keep the host's existing
 timeout semantics. Single slot host-wide: the most recent registration wins,
 and the registration is torn down with the plugin's dispose hooks. The
 contract is result-shaped (no thrown error classes) so it survives plugin
-bundling. Shipped for the builtin connect plugin's bb Cloud routing.
+bundling. Shipped for the builtin Cloud plugin's bb Cloud routing (the
+plugin's compatibility id remains `connect`).
 
 **Audit before stabilizing.**
 

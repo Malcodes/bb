@@ -743,7 +743,8 @@ transcribe({file, prompt?, signal}) }` where the async methods resolve to
 `isAvailable()` is true the host tries the provider before the locally
 configured AI providers and falls back on `ok: false`. Single host-wide slot;
 the most recent registration wins and is unregistered automatically with the
-plugin's dispose hooks. Used by the builtin connect plugin for bb Cloud.
+plugin's dispose hooks. Used by the builtin Cloud plugin (internal id
+`connect`) for bb Cloud.
 
 ## Frontend (`bb.app` entry)
 
@@ -835,11 +836,16 @@ export default definePluginApp((app) => {
     id: "credentials",
     component: CredentialForm,
   });
+  app.slots.settingsSection({
+    id: "remote-access",
+    title: "Remote access",
+    component: RemoteAccessSettings,
+  });
   app.slots.sidebarFooterAction({
-    id: "remote",
-    title: "bb Cloud",
+    id: "remote-access",
+    title: "Remote access",
     icon: "Smartphone",
-    run: ({ openSettings }) => openSettings(),
+    run: ({ openSettings }) => openSettings({ sectionId: "remote-access" }),
   });
   app.slots.messageDirective({ id: "inline-vis", component: InlineVis });
   app.slots.experimental_threadList({
@@ -1093,8 +1099,10 @@ Slot props contracts (versioned, additive-only):
   the chrome so icons stay consistent. Registration:
   `{ id, title, icon, run }`. Activating it calls
   `run({ openSettings })` — use `openSettings()` to open this plugin's
-  detail page in Tools, or do anything else (rpc, toast). Errors from `run`
-  (sync or async) are contained and logged,
+  detail page in Tools, or `openSettings({ sectionId: "my-section" })` to
+  target one of its registered settings sections. The action's `icon` is its
+  own glyph rather than the plugin branding icon. The callback can also do
+  anything else (rpc, toast). Errors from `run` (sync or async) are contained and logged,
   never breaking the sidebar. `title` is the tooltip + accessible label;
   `icon` is a BB icon-name hint (unknown names fall back to a generic bolt).
 - `fileOpener` → `{ path: string, source }` — register as a viewer/editor

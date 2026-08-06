@@ -161,7 +161,8 @@ isolated|reuse`, or anchor with `--source-seq-end`. Permission mode inherits
   https://getbb.app). Pairing returns immediately — the
   server itself holds the tunnel and reconnects on restart, so there is no
   foreground process.
-  `bb connect status` / `bb connect off` report and clear the pairing.
+  `bb connect status` reports the connection; `bb connect off` unlinks this bb
+  from Cloud and clears the pairing.
   While connected, AI features (thread titles, commit messages, voice
   transcription) route through bb Cloud by default with automatic fallback to
   locally configured providers; `bb connect ai [on|off]` shows or sets that
@@ -178,11 +179,11 @@ isolated|reuse`, or anchor with `--source-seq-end`. Permission mode inherits
   name, url, live) so callers can discover siblings; `--json` includes
   `selfHandle` for deduping this server. When you start a local server the user
   should open remotely, expose the port and give them the share URL. Remote
-  bb Cloud is owned by the builtin `connect` plugin: `bb plugin disable
-  connect` cuts it off entirely (remote access and AI features alike);
-  `bb plugin enable connect` restores it. Settings → bb Cloud shows the
-  current URL, QR code, shared ports, AI features toggle, re-pair form, and
-  disconnect control.
+  bb Cloud is provided by the builtin Cloud plugin (internal id `connect`):
+  `bb plugin disable connect` cuts it off entirely (remote access and AI
+  features alike);
+  `bb plugin enable connect` restores it. Settings → Cloud separates Remote
+  access (URL, QR code, shared ports, pairing, and disconnect) from Cloud AI.
 - Add remote execution machines from Settings → Machines. Its one-line
   installer stores the bb connect machine credential locally and configures
   both the daemon protocol and agent-launched `bb` CLI to traverse the account

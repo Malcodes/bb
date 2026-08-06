@@ -138,7 +138,7 @@ bb Cloud (bb connect):
   `npx -p bb-app@latest bb connect --code <code> --server <url>`.
 
   bb connect status                       Show the server's bb Cloud status
-  bb connect off                          Disconnect and forget the pairing
+  bb connect off                          Unlink this bb from Cloud and forget the pairing
   bb connect ai [on|off]                  Show or set the AI features setting
   bb connect expose <port> [--host <name-or-id>]    Share a host's HTTP port
   bb connect unexpose <port> [--host <name-or-id>]  Stop sharing on that host
@@ -164,7 +164,8 @@ bb Cloud (bb connect):
   configured providers on any cloud failure, and `bb connect ai off` turns
   the routing off entirely.
 
-  bb Cloud is owned by the builtin "connect" plugin (Settings → bb Cloud
-  shows the URL, QR code, shared ports, and the AI features toggle).
+  bb Cloud is provided by the builtin Cloud plugin (internal id `connect`).
+  Settings → Cloud separates Remote access (URL, QR code, shared ports, and
+  pairing) from Cloud AI.
   Disabling the plugin (`bb plugin disable connect`) cuts off all bb Cloud
   capabilities; re-enable with `bb plugin enable connect`.

@@ -435,8 +435,8 @@ bb server to **bb Cloud** — the getbb.app account relationship (claim a handle
 and copy the command at https://getbb.app). Once connected: the bb is
 reachable from any browser at `<handle>.getbb.app`, port shares and machine
 pairing work through the account, and AI features run through it (below).
-bb Cloud is owned by the builtin
-**connect plugin** (`plugins/connect/`): pairing redeems the code and stores
+bb Cloud is provided by the builtin **Cloud plugin** (internal id `connect`,
+implemented in `plugins/connect/`): pairing redeems the code and stores
 the durable credential in the plugin's kv storage (in `bb.db`), and the
 plugin's background service holds the connect tunnel — dialing the gate,
 proxying relayed requests to the server's own loopback (which serves the SPA
@@ -446,9 +446,9 @@ proxying relayed requests to the server's own loopback (which serves the SPA
   re-establishes on restart; there is no foreground client. Pair from a machine
   without an installed bb via `npx -p bb-app@latest bb connect …`.
   `bb connect status` shows the connect state and every share's host and URL;
-  `bb connect off` disconnects and clears the pairing. After pairing,
-  `bb connect expose <port>` run from a thread shares that thread environment's
-  enrolled host. Server-host URLs remain
+  `bb connect off` unlinks this bb from Cloud and clears the pairing. After
+  pairing, `bb connect expose <port>` run from a thread shares that thread
+  environment's enrolled host. Server-host URLs remain
   `https://<server-label>--<port>.getbb.app`; other machines use
   `https://<machine-label>--<port>.getbb.app` and proxy directly through the
   owning daemon. Outside a thread the command defaults to the server host;
@@ -468,15 +468,16 @@ proxy by default, with no local AI credentials needed. The cloud picks the
 models; `BB_INFERENCE`/`BB_TRANSCRIPTION` govern only the local fallback,
 which bb uses automatically when a cloud call fails. Usage is capped by a
 generous per-account daily cost budget (an abuse ceiling, not a usage limit —
-normal use never approaches it). Turn the routing off with the "AI features"
-toggle in Settings → bb Cloud or `bb connect ai off` (`bb connect ai` shows
+normal use never approaches it). Turn the routing off in Settings → Cloud →
+Cloud AI or with `bb connect ai off` (`bb connect ai` shows
 the current state; `bb connect status` includes it). Note that with AI
 features on, prompts, commit diffs, and voice audio transit getbb.app and its
 upstream model provider; they are processed for the request and not stored.
 
-The tunnel client lives in `plugins/connect/`; the CLI command is proxied to
-the plugin, and Settings → bb Cloud drives the plugin's rpc (including shared
-ports and the AI features toggle).
+The tunnel client lives in `plugins/connect/`, and the `bb connect` CLI command
+is proxied to the plugin. Settings → Cloud separates Remote access (pairing,
+URL, QR code, and shared ports) from Cloud AI while preserving one account
+connection underneath.
 
 ## Experiments
 
