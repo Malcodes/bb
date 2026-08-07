@@ -79,6 +79,12 @@ export const BUILTIN_PLUGINS = [
     category: "Developer tools",
   },
   {
+    name: "sales",
+    pluginId: "sales",
+    defaultEnabled: true,
+    category: "Interface",
+  },
+  {
     name: "side-chat",
     pluginId: "side-chat",
     defaultEnabled: true,

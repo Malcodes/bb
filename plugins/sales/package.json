@@ -1,0 +1,40 @@
+{
+  "name": "bb-plugin-sales",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-assembling sales work surface: a dynamically composed workspace driven by natural-language commands.",
+  "engines": {
+    "bb": ">=0.0"
+  },
+  "bb": {
+    "name": "Sales Surface",
+    "description": "Self-assembling sales work surface: a dynamically composed workspace driven by natural-language commands.",
+    "branding": {
+      "icon": "ChartLineData01"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx"
+  },
+  "keywords": [
+    "bb-plugin"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@bb/shared-ui": "workspace:*",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@bb/plugin-sdk": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-7": "npm:typescript@^7.0.2"
+  }
+}
