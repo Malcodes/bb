@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Self-assembling sales work surface: a dynamically composed workspace driven by natural-language commands.",
+  "description": "Thread-native persistent interactive work surfaces composed from native primitives.",
   "engines": {
     "bb": ">=0.0"
   },
   "bb": {
     "name": "Sales Surface",
-    "description": "Self-assembling sales work surface: a dynamically composed workspace driven by natural-language commands.",
+    "description": "Thread-native persistent interactive work surfaces composed from native primitives.",
     "branding": {
       "icon": "ChartLineData01"
     },

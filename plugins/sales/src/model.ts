@@ -50,6 +50,8 @@ export type View = {
 
 export type Workspace = {
   id: string;
+  /** Normal bb thread that owns and renders this interactive artifact. */
+  threadId: string;
   title: string;
   icon?: string;
   createdAt: string;
@@ -59,10 +61,28 @@ export type Workspace = {
 };
 
 export type Mutation =
-  | { op: "moveRow"; workspaceId: string; collectionId: string; rowId: string; field: string; value: RowValue }
-  | { op: "patchRow"; workspaceId: string; collectionId: string; rowId: string; patch: Record<string, RowValue> }
+  | {
+      op: "moveRow";
+      workspaceId: string;
+      collectionId: string;
+      rowId: string;
+      field: string;
+      value: RowValue;
+    }
+  | {
+      op: "patchRow";
+      workspaceId: string;
+      collectionId: string;
+      rowId: string;
+      patch: Record<string, RowValue>;
+    }
   | { op: "addRow"; workspaceId: string; collectionId: string; row: Row }
-  | { op: "removeRow"; workspaceId: string; collectionId: string; rowId: string }
+  | {
+      op: "removeRow";
+      workspaceId: string;
+      collectionId: string;
+      rowId: string;
+    }
   | { op: "reorderViews"; workspaceId: string; viewIds: string[] }
   | { op: "renameWorkspace"; workspaceId: string; title: string };
 
@@ -76,7 +96,9 @@ export function applyMutation(ws: Workspace, m: Mutation): boolean {
   if (m.op === "reorderViews") {
     if (m.workspaceId !== ws.id) return false;
     const order = new Map(m.viewIds.map((id, i) => [id, i]));
-    ws.views.sort((a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999));
+    ws.views.sort(
+      (a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999),
+    );
     return true;
   }
   if (m.workspaceId !== ws.id) return false;
