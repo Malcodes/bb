@@ -6,6 +6,7 @@ import {
   useRealtimeConnectionState,
   type PluginNavPanelProps,
 } from "@bb/plugin-sdk/app";
+import { Badge } from "@bb/shared-ui/badge";
 import { Button } from "@bb/shared-ui/button";
 import { Input } from "@bb/shared-ui/input";
 import { ScrollArea } from "@bb/shared-ui/scroll-area";
@@ -68,6 +69,7 @@ function SalesSurfacePanel(_props: PluginNavPanelProps) {
   }
 
   const lastAgent = [...state.turns].reverse().find((t) => t.role === "agent");
+  const working = busy;
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -77,7 +79,13 @@ function SalesSurfacePanel(_props: PluginNavPanelProps) {
       </header>
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-5 p-6">
-          {lastAgent && (
+          {working && (
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground">
+              <Badge variant="secondary" className="text-[10px]">agent working</Badge>
+              Assembling your surface…
+            </div>
+          )}
+          {!working && lastAgent && (
             <div className="rounded-lg border bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground">
               {lastAgent.text}
             </div>
