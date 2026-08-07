@@ -529,6 +529,24 @@ function normalizeShellEnvOverrides(
     : undefined;
 }
 
+export const BB_PI_OPENROUTER_MAX_OUTPUT_TOKENS =
+  "BB_PI_OPENROUTER_MAX_OUTPUT_TOKENS";
+export const DEFAULT_PI_OPENROUTER_MAX_OUTPUT_TOKENS = 32_768;
+
+export function resolvePiOpenRouterMaxOutputTokens(
+  env: NodeJS.ProcessEnv,
+): number {
+  const raw = env[BB_PI_OPENROUTER_MAX_OUTPUT_TOKENS]?.trim();
+  if (!raw) return DEFAULT_PI_OPENROUTER_MAX_OUTPUT_TOKENS;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1_024 || parsed > 131_072) {
+    throw new Error(
+      `${BB_PI_OPENROUTER_MAX_OUTPUT_TOKENS} must be an integer from 1024 to 131072`,
+    );
+  }
+  return parsed;
+}
+
 function buildSessionOptions(
   args: BuildPiSessionOptionsArgs,
 ): PiSdkSessionOptions {
@@ -542,6 +560,11 @@ function buildSessionOptions(
   return {
     cwd: args.params.cwd,
     model: args.params.model,
+    ...(args.params.model?.startsWith("openrouter/")
+      ? {
+          maxOutputTokens: resolvePiOpenRouterMaxOutputTokens(process.env),
+        }
+      : {}),
     sessionFilePath,
     systemPrompt: args.params.baseInstructions,
     appendSystemPrompt: args.params.appendSystemPrompt,

@@ -203,7 +203,7 @@ vi.mock("../configured-services.js", () => ({
   createConfiguredPiServices: mockCreateAgentSessionServices,
 }));
 
-import { PiSdkSession } from "../sdk-session.js";
+import { capModelOutputTokens, PiSdkSession } from "../sdk-session.js";
 
 function rejectPromptWithTransientAuthError(count: number, error: Error): void {
   for (let index = 0; index < count; index += 1) {
@@ -264,6 +264,38 @@ async function flushDeferredSteerSettlement(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));
   await flushAsyncWork();
 }
+
+describe("OpenRouter output cap", () => {
+  it("caps output tokens without changing the context window", () => {
+    const model = {
+      id: "vendor/large-model",
+      provider: "openrouter",
+      maxTokens: 131_072,
+      contextWindow: 262_144,
+    } as never;
+
+    const capped = capModelOutputTokens(model, 32_768);
+
+    expect(capped).toMatchObject({
+      maxTokens: 32_768,
+      contextWindow: 262_144,
+    });
+    expect(model).toMatchObject({
+      maxTokens: 131_072,
+      contextWindow: 262_144,
+    });
+  });
+
+  it("does not raise an existing lower model output limit", () => {
+    const model = {
+      id: "vendor/small-model",
+      provider: "openrouter",
+      maxTokens: 8_192,
+      contextWindow: 128_000,
+    } as never;
+    expect(capModelOutputTokens(model, 32_768)).toBe(model);
+  });
+});
 
 describe("PiSdkSession", () => {
   beforeEach(() => {

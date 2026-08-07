@@ -28,6 +28,8 @@ export interface PiSdkSessionOptions {
   sessionFilePath?: string;
   systemPrompt?: string;
   appendSystemPrompt?: string;
+  /** Cap generated output tokens without changing the model context window. */
+  maxOutputTokens?: number;
 }
 
 export type ShellEnvOverrides = Record<string, string>;
@@ -236,9 +238,13 @@ export class PiSdkSession {
       },
     });
 
-    const configuredModel = resolveConfiguredModel(
+    const resolvedModel = resolveConfiguredModel(
       services.modelRuntime,
       this.options.model,
+    );
+    const configuredModel = capModelOutputTokens(
+      resolvedModel,
+      this.options.maxOutputTokens,
     );
 
     const customTools = buildSessionCustomTools({
@@ -625,6 +631,23 @@ type PiModel = NonNullable<ReturnType<ModelRuntime["getModel"]>>;
  * same id, and nothing in the string says which one was meant, so an ambiguous
  * match is an error rather than a guess.
  */
+export function capModelOutputTokens(
+  model: PiModel | undefined,
+  maxOutputTokens: number | undefined,
+): PiModel | undefined {
+  if (
+    model === undefined ||
+    maxOutputTokens === undefined ||
+    typeof model.maxTokens !== "number" ||
+    model.maxTokens <= maxOutputTokens
+  ) {
+    return model;
+  }
+  // Pi derives max_tokens from model.maxTokens. Clone only that field: the
+  // contextWindow remains untouched and continues to govern input capacity.
+  return { ...model, maxTokens: maxOutputTokens };
+}
+
 function resolveConfiguredModel(
   modelRuntime: ModelRuntime,
   modelStr: string | undefined,
