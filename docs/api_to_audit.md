@@ -44,7 +44,6 @@ Each label is capped at 80 characters and rendered as a truncating segment.
    only for non-MCP native plugin tools. Confirm that distinction stays sound
    as provider adapters and dynamic-tool provenance evolve.
 
-
 ## `experimental_NewThreadComposer` (`@bb/plugin-sdk/app`)
 
 **What it does.** The host-owned new-thread compose surface, the create-side
@@ -213,6 +212,7 @@ reimplementing it, and `indicatorLabel` carries the matching accessible string.
    a sidebar of many distinct worktrees does not stampede the git host; and
    returning `null` for "lookup failed" (rather than an error) is the right
    failure for a row that should simply show nothing.
+
 ## `app.slots.experimental_threadHeaderAction` (`@bb/plugin-sdk/app`)
 
 **What it does.** Renders a plugin component in the thread header's action row.
@@ -258,10 +258,12 @@ slots need the same treatment.
 
 **What it does.** Registers a cloud route for bb's small AI tasks (thread-title
 inference, commit-message inference, voice transcription). Per call, when the
-provider's synchronous `isAvailable()` is true, the host tries it before the
-locally configured `BB_INFERENCE`/`BB_TRANSCRIPTION` providers; an `ok: false`
-result falls through to those, and host-side timeouts keep the host's existing
-timeout semantics. Single slot host-wide: the most recent registration wins,
+server's `cloudAi` experiment is enabled and the provider's synchronous
+`isAvailable()` is true, the host tries it before the locally configured
+`BB_INFERENCE`/`BB_TRANSCRIPTION` providers; an `ok: false` result falls
+through to those, and host-side timeouts keep the host's existing timeout
+semantics. While the experiment is off, a provider may remain registered but
+is never called. Single slot host-wide: the most recent registration wins,
 and the registration is torn down with the plugin's dispose hooks. The
 contract is result-shaped (no thrown error classes) so it survives plugin
 bundling. Shipped for the builtin Cloud plugin's bb Cloud routing (the

@@ -677,9 +677,10 @@ export interface CloudAiTranscribeArgs {
 
 /**
  * A cloud route for bb's small AI tasks (thread titles, commit messages,
- * voice transcription). When a registered provider `isAvailable()`, the host
- * tries it before the locally configured `BB_INFERENCE`/`BB_TRANSCRIPTION`
- * providers and falls back to those on `ok: false`.
+ * voice transcription). When the server's Cloud AI experiment is enabled and
+ * a registered provider `isAvailable()`, the host tries it before the locally
+ * configured `BB_INFERENCE`/`BB_TRANSCRIPTION` providers and falls back to
+ * those on `ok: false`.
  */
 export interface CloudAiProvider {
   /**

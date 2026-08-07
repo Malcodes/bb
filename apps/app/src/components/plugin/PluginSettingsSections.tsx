@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useSystemConfig } from "@/hooks/queries/system-queries";
 import {
   usePluginSlots,
   type PluginSettingsSectionSlot,
@@ -10,6 +11,20 @@ import {
   ResourceDetailConfigurationSection,
 } from "@bb/shared-ui/resource-list";
 
+const CONNECT_PLUGIN_ID = "connect";
+const CLOUD_AI_SECTION_ID = "cloud-ai";
+
+function isSettingsSectionVisible(
+  section: PluginSettingsSectionSlot,
+  cloudAiEnabled: boolean,
+): boolean {
+  return !(
+    section.pluginId === CONNECT_PLUGIN_ID &&
+    section.id === CLOUD_AI_SECTION_ID &&
+    !cloudAiEnabled
+  );
+}
+
 /**
  * Plugin `settingsSection` slot mounts, rendered on that plugin's canonical
  * Plugins detail page below the host-rendered declarative form.
@@ -17,8 +32,12 @@ import {
  */
 export function PluginSettingsSections({ pluginId }: { pluginId: string }) {
   const { settingsSections } = usePluginSlots();
+  const cloudAiEnabled =
+    useSystemConfig().data?.experiments?.cloudAi === true;
   const sections = settingsSections.filter(
-    (section) => section.pluginId === pluginId,
+    (section) =>
+      section.pluginId === pluginId &&
+      isSettingsSectionVisible(section, cloudAiEnabled),
   );
   if (sections.length === 0) return null;
   return <PluginSettingsSectionList sections={sections} />;

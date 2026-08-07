@@ -123,8 +123,9 @@ bb Cloud (bb connect):
   Connect this bb server to bb Cloud (getbb.app). Once connected it is
   reachable from any browser at <handle>.getbb.app, port shares work through
   the account, and AI features (thread titles, commit messages, voice
-  transcription) run through it. Claim a handle at https://getbb.app, copy the
-  connect command it generates, then run it here to
+  transcription) can run through it when the Cloud AI experiment is enabled.
+  Claim a handle at https://getbb.app, copy the connect command it generates,
+  then run it here to
   pair:
 
   bb connect --code <code> --server https://<handle>.getbb.app
@@ -140,6 +141,7 @@ bb Cloud (bb connect):
   bb connect status                       Show the server's bb Cloud status
   bb connect off                          Unlink this bb from Cloud and forget the pairing
   bb connect ai [on|off]                  Show or set the AI features setting
+  bb settings experiment cloudAi true    Enable the Cloud AI product gate
   bb connect expose <port> [--host <name-or-id>]    Share a host's HTTP port
   bb connect unexpose <port> [--host <name-or-id>]  Stop sharing on that host
   bb connect shares [--host <name-or-id>]           List that host's shares
@@ -158,14 +160,17 @@ bb Cloud (bb connect):
   `bb connect status` shows all shares with host + URL. `shares --json` returns
   the resolved `host` and rows with `hostId`, `hostName`, `port`, and `url`.
 
-  While connected, AI features route thread-title inference, commit-message
-  inference, and voice transcription through the account's bb Cloud AI proxy
-  by default (no local AI credentials needed); bb falls back to the locally
-  configured providers on any cloud failure, and `bb connect ai off` turns
-  the routing off entirely.
+  After `bb settings experiment cloudAi true`, AI features can route
+  thread-title inference, commit-message inference, and voice transcription
+  through the account's bb Cloud AI proxy (no local AI credentials needed).
+  bb falls back to locally configured providers on any cloud failure.
+  `bb connect ai [on|off]` controls the plugin's separate inner preference;
+  both the experiment and preference must be on. The experiment does not
+  affect Remote access, pairing, or port sharing.
 
   bb Cloud is provided by the builtin Cloud plugin (internal id `connect`).
-  Settings → Cloud separates Remote access (URL, QR code, shared ports, and
-  pairing) from Cloud AI.
+  Settings → Cloud always contains Remote access (URL, QR code, shared ports,
+  and pairing) and adds a separate Cloud AI section when the `cloudAi`
+  experiment is enabled.
   Disabling the plugin (`bb plugin disable connect`) cuts off all bb Cloud
   capabilities; re-enable with `bb plugin enable connect`.

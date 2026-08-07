@@ -1,3 +1,5 @@
+import { setExperiments, type DbConnection } from "@bb/db";
+import { defaultExperiments } from "@bb/domain";
 import type { CloudAiProvider, CloudAiResult, JsonValue } from "@bb/plugin-sdk";
 import { Type } from "@earendil-works/pi-ai";
 import { afterEach, describe, expect, it } from "vitest";
@@ -20,6 +22,10 @@ import { withTestHarness } from "../helpers/test-app.js";
 const titleSchema = Type.Object({
   title: Type.String(),
 });
+
+function enableCloudAiExperiment(db: DbConnection): void {
+  setExperiments(db, { ...defaultExperiments, cloudAi: true });
+}
 
 describe("inferenceComplete", () => {
   it("surfaces missing host for codex inference", async () => {
@@ -159,12 +165,28 @@ describe("inferenceComplete cloud provider routing", () => {
     return provider;
   }
 
+  it("does not use a registered provider while the experiment is off", async () => {
+    await withTestHarness(async (harness) => {
+      const provider = stubProvider({});
+      registerCloudAiProvider("connect", provider);
+
+      await expect(
+        inferenceComplete(harness.deps, {
+          prompt: "Generate a title",
+          schema: titleSchema,
+        }),
+      ).resolves.toBeNull();
+      expect(provider.completeCalls).toBe(0);
+    });
+  });
+
   it("routes through an available provider instead of the codex daemon", async () => {
     // codex model configured and NO host connected: success proves the daemon
     // path was never consulted (it would throw host_unavailable).
     await withTestHarness({
       inferenceModel: "codex/gpt-5.4-mini",
     }, async (harness) => {
+      enableCloudAiExperiment(harness.db);
       const provider = stubProvider({});
       registerCloudAiProvider("connect", provider);
       let sentSchema: JsonValue | null = null;
@@ -187,6 +209,7 @@ describe("inferenceComplete cloud provider routing", () => {
 
   it("skips an unavailable provider and returns null on invalid results", async () => {
     await withTestHarness(async (harness) => {
+      enableCloudAiExperiment(harness.db);
       const unavailable = stubProvider({ available: false });
       registerCloudAiProvider("connect", unavailable);
       // Local config is test/mock-model (unsupported) → local path yields null.
@@ -213,6 +236,7 @@ describe("inferenceComplete cloud provider routing", () => {
 
   it("falls through to local on provider failure or a provider bug", async () => {
     await withTestHarness(async (harness) => {
+      enableCloudAiExperiment(harness.db);
       const failing = stubProvider({
         complete: async () => ({
           ok: false,
@@ -246,6 +270,7 @@ describe("inferenceComplete cloud provider routing", () => {
 
   it("turns a provider timeout into InferenceTimeoutError without local fallback", async () => {
     await withTestHarness(async (harness) => {
+      enableCloudAiExperiment(harness.db);
       registerCloudAiProvider(
         "connect",
         stubProvider({
@@ -270,6 +295,7 @@ describe("inferenceComplete cloud provider routing", () => {
 
   it("stale unregister hooks cannot tear down a newer registration", async () => {
     await withTestHarness(async (harness) => {
+      enableCloudAiExperiment(harness.db);
       const first = stubProvider({});
       const unregisterFirst = registerCloudAiProvider("connect", first);
       const second = stubProvider({});

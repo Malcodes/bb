@@ -462,28 +462,38 @@ proxying relayed requests to the server's own loopback (which serves the SPA
   (`bb plugin disable connect`) cuts off all bb Cloud capabilities — remote
   access and AI features alike; `bb plugin enable connect` restores them.
 
-While connected, **AI features** — thread-title inference, commit-message
-inference, and voice transcription — route through the account's bb Cloud AI
-proxy by default, with no local AI credentials needed. The cloud picks the
-models; `BB_INFERENCE`/`BB_TRANSCRIPTION` govern only the local fallback,
-which bb uses automatically when a cloud call fails. Usage is capped by a
-generous per-account daily cost budget (an abuse ceiling, not a usage limit —
-normal use never approaches it). Turn the routing off in Settings → Cloud →
-Cloud AI or with `bb connect ai off` (`bb connect ai` shows
-the current state; `bb connect status` includes it). Note that with AI
-features on, prompts, commit diffs, and voice audio transit getbb.app and its
-upstream model provider; they are processed for the request and not stored.
+When the default-off `cloudAi` experiment is enabled, **AI features** —
+thread-title inference, commit-message inference, and voice transcription —
+can route through the account's bb Cloud AI proxy while connected, with no
+local AI credentials needed. Enable the experiment in Settings → Experiments
+or with `bb settings experiment cloudAi true`. The cloud picks the models;
+`BB_INFERENCE`/`BB_TRANSCRIPTION` govern only the local fallback, which bb uses
+automatically when a cloud call fails. Usage is capped by a generous
+per-account daily cost budget (an abuse ceiling, not a usage limit — normal
+use never approaches it).
+
+The experiment is the outer product gate: while it is off, Cloud AI is hidden
+from the Cloud plugin settings and the server never sends it inference or
+voice requests. Once enabled, Settings → Cloud → Cloud AI and
+`bb connect ai [on|off]` control the paired plugin's inner routing preference;
+both switches must be on for Cloud AI to be used. `bb connect status` includes
+the inner preference. With both enabled, prompts, commit diffs, and voice audio
+transit getbb.app and its upstream model provider; they are processed for the
+request and not stored.
 
 The tunnel client lives in `plugins/connect/`, and the `bb connect` CLI command
-is proxied to the plugin. Settings → Cloud separates Remote access (pairing,
-URL, QR code, and shared ports) from Cloud AI while preserving one account
-connection underneath.
+is proxied to the plugin. Settings → Cloud always contains Remote access
+(pairing, URL, QR code, and shared ports) and adds a separate Cloud AI section
+when its experiment is enabled, preserving one account connection underneath.
 
 ## Experiments
 
 Experimental surfaces are off by default and can be changed in Settings →
 Experiments or with `bb settings experiment <key> <true|false>`. The
 `newOnboarding` experiment exposes the first-run agent and project setup guide.
+The `cloudAi` experiment permits server AI tasks to use a registered cloud
+provider and reveals the Cloud AI section of the builtin Cloud plugin. It does
+not affect Remote access, pairing, or port sharing.
 The `toolsHub` experiment exposes Extensions for managing skills and plugins,
 while Automations stays in the Plugins section beside threads. The `toolsHub`
 gate only controls the UI. Installed skills, automation execution, plugin

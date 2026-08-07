@@ -1,4 +1,6 @@
 import { Buffer } from "node:buffer";
+import { setExperiments, type DbConnection } from "@bb/db";
+import { defaultExperiments } from "@bb/domain";
 import type { HostDaemonOnlineRpcRequestMessage } from "@bb/host-daemon-contract";
 import type { CloudAiProvider, CloudAiResult } from "@bb/plugin-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -50,6 +52,10 @@ function voiceFile(): File {
 
 function emptyVoiceFile(): File {
   return new File([], "prompt.webm", { type: "audio/webm" });
+}
+
+function enableCloudAiExperiment(db: DbConnection): void {
+  setExperiments(db, { ...defaultExperiments, cloudAi: true });
 }
 
 function requireCodexVoiceTranscribeCommand(
@@ -306,6 +312,7 @@ describe("voice transcription cloud provider routing", () => {
   it("transcribes through an available provider with the trimmed prompt", async () => {
     const harness = await createTestAppHarness({});
     try {
+      enableCloudAiExperiment(harness.deps.db);
       let sentPrompt: string | undefined;
       registerCloudAiProvider(
         "connect",
@@ -339,6 +346,7 @@ describe("voice transcription cloud provider routing", () => {
       },
     });
     try {
+      enableCloudAiExperiment(harness.deps.db);
       registerCloudAiProvider(
         "connect",
         stubProvider({
@@ -361,6 +369,7 @@ describe("voice transcription cloud provider routing", () => {
   it("maps quota exhaustion to a retryable 503 when no local provider exists", async () => {
     const harness = await createTestAppHarness({});
     try {
+      enableCloudAiExperiment(harness.deps.db);
       registerCloudAiProvider(
         "connect",
         stubProvider({
@@ -391,6 +400,7 @@ describe("voice transcription cloud provider routing", () => {
   it("maps a provider timeout to the standard 504 without a local attempt", async () => {
     const harness = await createTestAppHarness({});
     try {
+      enableCloudAiExperiment(harness.deps.db);
       registerCloudAiProvider(
         "connect",
         stubProvider({
@@ -418,7 +428,7 @@ describe("voice transcription cloud provider routing", () => {
     }
   });
 
-  it("reports voice transcription enabled from provider availability alone", async () => {
+  it("reports voice transcription enabled only when the experiment and provider are available", async () => {
     const harness = await createTestAppHarness({});
     try {
       // Default harness config: unsupported local transcription provider.
@@ -426,6 +436,8 @@ describe("voice transcription cloud provider routing", () => {
       registerCloudAiProvider("connect", stubProvider({ available: false }));
       expect(resolveVoiceTranscriptionEnabled(harness.deps)).toBe(false);
       registerCloudAiProvider("connect", stubProvider({}));
+      expect(resolveVoiceTranscriptionEnabled(harness.deps)).toBe(false);
+      enableCloudAiExperiment(harness.deps.db);
       expect(resolveVoiceTranscriptionEnabled(harness.deps)).toBe(true);
     } finally {
       await harness.cleanup();

@@ -336,16 +336,28 @@ describe("PluginSettingsDetail settings gating", () => {
     });
   });
 
-  it("renders a slot-only settings page", async () => {
+  it("keeps Remote access visible while Cloud AI follows its experiment", async () => {
     const scrollIntoView = vi.fn();
     HTMLElement.prototype.scrollIntoView = scrollIntoView;
     function ConnectSettings() {
       return <div>Custom connect settings</div>;
     }
+    function CloudAiSettings() {
+      return <div>Custom Cloud AI settings</div>;
+    }
     setPluginSlotRegistrations("connect", {
       homepageSections: [],
       settingsSections: [
-        { id: "remote", title: "Remote access", component: ConnectSettings },
+        {
+          id: "remote-access",
+          title: "Remote access",
+          component: ConnectSettings,
+        },
+        {
+          id: "cloud-ai",
+          title: "Cloud AI",
+          component: CloudAiSettings,
+        },
       ],
       navPanels: [],
       threadPanelActions: [],
@@ -375,9 +387,11 @@ describe("PluginSettingsDetail settings gating", () => {
       }),
     );
 
-    const { wrapper } = createQueryClientTestHarness();
+    const { queryClient, wrapper } = createQueryClientTestHarness();
     render(
-      <MemoryRouter initialEntries={["/settings/plugins/connect#remote"]}>
+      <MemoryRouter
+        initialEntries={["/settings/plugins/connect#remote-access"]}
+      >
         <PluginSettingsDetailSection pluginId="connect" />
       </MemoryRouter>,
       { wrapper },
@@ -385,11 +399,20 @@ describe("PluginSettingsDetail settings gating", () => {
 
     expect(await screen.findByText("Remote access")).toBeDefined();
     expect(screen.getByText("Custom connect settings")).toBeDefined();
-    expect(document.getElementById("remote")).not.toBeNull();
+    expect(document.getElementById("remote-access")).not.toBeNull();
+    expect(screen.queryByText("Cloud AI")).toBeNull();
+    expect(screen.queryByText("Custom Cloud AI settings")).toBeNull();
     expect(screen.queryByText("This plugin declares no settings.")).toBeNull();
     await vi.waitFor(() =>
       expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" }),
     );
+
+    queryClient.setQueryData(systemConfigQueryKey(), {
+      ...systemConfig(),
+      experiments: { ...defaultExperiments, cloudAi: true },
+    });
+    expect(await screen.findByText("Cloud AI")).toBeDefined();
+    expect(screen.getByText("Custom Cloud AI settings")).toBeDefined();
   });
 });
 

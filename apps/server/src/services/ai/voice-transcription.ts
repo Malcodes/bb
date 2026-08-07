@@ -66,7 +66,7 @@ export function resolveVoiceTranscriptionEnabled(
   deps: LoggedWorkSessionDeps,
 ): boolean {
   return (
-    getAvailableCloudAiProvider() !== null ||
+    getAvailableCloudAiProvider(deps.db) !== null ||
     resolveLocalVoiceTranscriptionEnabled(deps)
   );
 }
@@ -355,7 +355,7 @@ export async function transcribeVoiceInput(
     throw new ApiError(400, "invalid_request", "Audio file exceeds 25MB limit");
   }
 
-  const cloudProvider = getAvailableCloudAiProvider();
+  const cloudProvider = getAvailableCloudAiProvider(deps.db);
   if (cloudProvider !== null) {
     const cloud = await transcribeWithCloudAi(deps, cloudProvider, args);
     if (cloud.ok) {

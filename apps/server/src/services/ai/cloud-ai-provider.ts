@@ -1,3 +1,4 @@
+import { getExperiments, type DbConnection } from "@bb/db";
 import type { CloudAiProvider } from "@bb/plugin-sdk";
 
 // Host-side slot for the experimental cloud AI provider seam
@@ -27,8 +28,15 @@ export function registerCloudAiProvider(
   };
 }
 
-/** The registered provider when it reports itself available, else null. */
-export function getAvailableCloudAiProvider(): CloudAiProvider | null {
+/**
+ * The registered provider when the user has opted into the experiment and the
+ * provider reports itself available, else null. The server owns this policy
+ * gate so callers cannot bypass it by invoking an AI route directly.
+ */
+export function getAvailableCloudAiProvider(
+  db: DbConnection,
+): CloudAiProvider | null {
+  if (!getExperiments(db).cloudAi) return null;
   if (registered === null) return null;
   return registered.provider.isAvailable() ? registered.provider : null;
 }

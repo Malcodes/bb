@@ -77,6 +77,10 @@ message agents, or inspect projects, providers, and environments.
   and Automations management UI. Change it with
   `bb settings experiment toolsHub <true|false>`. It does not load or unload
   tools.
+- The default-off `cloudAi` experiment permits paired cloud providers to serve
+  thread-title inference, commit-message inference, and voice transcription.
+  Change it with `bb settings experiment cloudAi <true|false>`. It does not
+  affect Remote access, pairing, or port sharing.
 - The default-off `newOnboarding` experiment exposes the first-run agent and
   project setup guide. Change it with
   `bb settings experiment newOnboarding <true|false>`. Use
@@ -163,10 +167,11 @@ isolated|reuse`, or anchor with `--source-seq-end`. Permission mode inherits
   foreground process.
   `bb connect status` reports the connection; `bb connect off` unlinks this bb
   from Cloud and clears the pairing.
-  While connected, AI features (thread titles, commit messages, voice
-  transcription) route through bb Cloud by default with automatic fallback to
-  locally configured providers; `bb connect ai [on|off]` shows or sets that
-  routing.
+  After `bb settings experiment cloudAi true`, AI features (thread titles,
+  commit messages, voice transcription) can route through bb Cloud with
+  automatic fallback to locally configured providers. `bb connect ai
+  [on|off]` shows or sets the plugin's inner preference; the experiment and
+  preference must both be on.
   Port sharing works from a thread on any enrolled host. `bb connect expose
 <port>` resolves that thread's environment host and returns its public URL;
   outside a thread it defaults to the server host. Pass `--host
@@ -182,8 +187,9 @@ isolated|reuse`, or anchor with `--source-seq-end`. Permission mode inherits
   bb Cloud is provided by the builtin Cloud plugin (internal id `connect`):
   `bb plugin disable connect` cuts it off entirely (remote access and AI
   features alike);
-  `bb plugin enable connect` restores it. Settings → Cloud separates Remote
-  access (URL, QR code, shared ports, pairing, and disconnect) from Cloud AI.
+  `bb plugin enable connect` restores it. Settings → Cloud always contains
+  Remote access (URL, QR code, shared ports, pairing, and disconnect) and adds
+  a separate Cloud AI section when the `cloudAi` experiment is enabled.
 - Add remote execution machines from Settings → Machines. Its one-line
   installer stores the bb connect machine credential locally and configures
   both the daemon protocol and agent-launched `bb` CLI to traverse the account

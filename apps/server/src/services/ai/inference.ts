@@ -225,15 +225,15 @@ async function completeWithCloudAi<T extends TSchema>(
  * are validated against the schema and returned. Returns `null` if the
  * model is not configured or does not produce a valid tool call.
  *
- * A registered cloud AI provider (bb Cloud via the connect plugin) is tried
- * first when it reports itself available; local provider configuration is the
- * fallback on cloud failure.
+ * When the Cloud AI experiment is enabled, a registered cloud AI provider
+ * (bb Cloud via the connect plugin) is tried first when it reports itself
+ * available; local provider configuration is the fallback on cloud failure.
  */
 export async function inferenceComplete<T extends TSchema>(
   deps: InferenceCompleteDeps,
   args: InferenceCompleteArgs<T>,
 ): Promise<Static<T> | null> {
-  const cloudProvider = getAvailableCloudAiProvider();
+  const cloudProvider = getAvailableCloudAiProvider(deps.db);
   if (cloudProvider !== null) {
     const outcome = await completeWithCloudAi(deps, cloudProvider, args);
     if (outcome.ok) {

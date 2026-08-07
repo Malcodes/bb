@@ -740,11 +740,12 @@ The provider is `{ isAvailable(): boolean; complete({prompt, schema, signal});
 transcribe({file, prompt?, signal}) }` where the async methods resolve to
 `{ ok: true, value }` or `{ ok: false, code, message }` (codes: `unauthorized`,
 `quota_exhausted`, `unavailable`) — result-shaped, never thrown classes. When
-`isAvailable()` is true the host tries the provider before the locally
-configured AI providers and falls back on `ok: false`. Single host-wide slot;
-the most recent registration wins and is unregistered automatically with the
-plugin's dispose hooks. Used by the builtin Cloud plugin (internal id
-`connect`) for bb Cloud.
+the server's `cloudAi` experiment is enabled and `isAvailable()` is true, the
+host tries the provider before the locally configured AI providers and falls
+back on `ok: false`. While the experiment is off, the provider may remain
+registered but is never called. Single host-wide slot; the most recent
+registration wins and is unregistered automatically with the plugin's dispose
+hooks. Used by the builtin Cloud plugin (internal id `connect`) for bb Cloud.
 
 ## Frontend (`bb.app` entry)
 
