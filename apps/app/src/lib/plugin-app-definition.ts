@@ -142,6 +142,15 @@ export function collectPluginAppRegistrations(
           );
         }
         if (
+          registration.surface !== undefined &&
+          registration.surface !== "workspace" &&
+          registration.surface !== "application"
+        ) {
+          throw new Error(
+            `${kind}: "surface" must be "workspace" or "application" when set`,
+          );
+        }
+        if (
           registration.headerContent !== undefined &&
           typeof registration.headerContent !== "function"
         ) {
@@ -157,6 +166,9 @@ export function collectPluginAppRegistrations(
           component: requireComponent(kind, registration.component),
           ...(registration.sidebar !== undefined
             ? { sidebar: registration.sidebar }
+            : {}),
+          ...(registration.surface !== undefined
+            ? { surface: registration.surface }
             : {}),
           ...(registration.headerContent !== undefined
             ? { headerContent: registration.headerContent }

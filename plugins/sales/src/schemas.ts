@@ -11,10 +11,123 @@ export const rowSchema = z
   .object({ id: z.string().min(1) })
   .catchall(rowValueSchema);
 
+const semanticToneSchema = z.enum([
+  "neutral",
+  "info",
+  "success",
+  "warning",
+  "danger",
+]);
+const fieldMetadataSchema = z
+  .object({
+    label: z.string().optional(),
+    type: z
+      .enum([
+        "text",
+        "multiline",
+        "number",
+        "currency",
+        "date",
+        "datetime",
+        "select",
+        "multi-select",
+        "boolean",
+        "url",
+        "email",
+        "person",
+        "image",
+        "badge",
+      ])
+      .optional(),
+    icon: z.string().optional(),
+    required: z.boolean().optional(),
+    placeholder: z.string().optional(),
+    options: z.array(z.string()).optional(),
+    toneMap: z.record(z.string(), semanticToneSchema).optional(),
+  })
+  .strict();
+
+const kanbanPresentationSchema = z
+  .object({
+    density: z.enum(["compact", "comfortable"]).optional(),
+    card: z
+      .object({
+        titleField: z.string().optional(),
+        subtitleField: z.string().optional(),
+        eyebrowField: z.string().optional(),
+        avatar: z
+          .object({
+            imageField: z.string().optional(),
+            fallbackField: z.string().optional(),
+            shape: z.enum(["circle", "rounded"]).optional(),
+          })
+          .strict()
+          .optional(),
+        metadata: z
+          .array(
+            z
+              .object({
+                field: z.string(),
+                icon: z.string().optional(),
+                format: z
+                  .enum(["text", "relative-date", "date", "currency"])
+                  .optional(),
+              })
+              .strict(),
+          )
+          .max(3)
+          .optional(),
+        badges: z
+          .array(
+            z
+              .object({
+                field: z.string(),
+                icon: z.string().optional(),
+                tone: semanticToneSchema.optional(),
+                toneMap: z.record(z.string(), semanticToneSchema).optional(),
+              })
+              .strict(),
+          )
+          .max(3)
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    lanes: z
+      .object({
+        iconMap: z.record(z.string(), z.string()).optional(),
+        toneMap: z.record(z.string(), semanticToneSchema).optional(),
+      })
+      .strict()
+      .optional(),
+    create: z
+      .object({ fields: z.array(z.string()).min(1).max(6) })
+      .strict()
+      .optional(),
+    detail: z
+      .object({
+        sections: z
+          .array(
+            z
+              .object({
+                title: z.string(),
+                fields: z.array(z.string()).min(1),
+              })
+              .strict(),
+          )
+          .max(5),
+      })
+      .strict()
+      .optional(),
+    filters: z.array(z.string()).max(6).optional(),
+  })
+  .strict();
+
 export const collectionSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   fields: z.array(z.string().min(1)),
+  fieldMeta: z.record(z.string(), fieldMetadataSchema).optional(),
   rows: z.array(rowSchema),
 });
 
@@ -30,6 +143,7 @@ export const viewConfigSchema = z
     subField: z.string().optional(),
     flagField: z.string().optional(),
     timeField: z.string().optional(),
+    presentation: kanbanPresentationSchema.optional(),
     items: z
       .array(
         z.object({
@@ -64,6 +178,7 @@ export const workspaceSchema = z.object({
   navOrder: z.number().int(),
   revision: z.number().int().nonnegative(),
   title: z.string().min(1),
+  description: z.string().max(180).optional(),
   icon: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -125,6 +240,7 @@ export const mutationSchema = z.discriminatedUnion("op", [
 
 export const createWorkspaceInputSchema = z.object({
   title: z.string().min(1).max(60),
+  description: z.string().max(180).optional(),
   icon: z.string().optional(),
   collections: z.array(collectionSchema).min(1),
   views: z

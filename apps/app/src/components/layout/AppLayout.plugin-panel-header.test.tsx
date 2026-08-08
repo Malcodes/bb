@@ -44,6 +44,13 @@ vi.mock("@/lib/plugin-slots", () => ({
         title: "Helm Wiki",
         icon: "Book",
       },
+      {
+        pluginId: "sales",
+        path: "tool",
+        title: "Generated tool",
+        icon: "Kanban",
+        surface: "application",
+      },
     ],
   }),
 }));
@@ -153,9 +160,9 @@ vi.mock("@/hooks/queries/thread-queries", () => ({
   getLatestPendingInteraction: () => null,
 }));
 
-function renderPluginPanelRoute(): void {
+function renderPluginPanelRoute(path = "/plugins/helm-wiki/wiki"): void {
   render(
-    <MemoryRouter initialEntries={["/plugins/helm-wiki/wiki"]}>
+    <MemoryRouter initialEntries={[path]}>
       <AppLayout>
         <div>Plugin panel body</div>
       </AppLayout>
@@ -187,5 +194,12 @@ describe("AppLayout plugin panel header", () => {
     renderPluginPanelRoute();
 
     expect(screen.queryByTestId("app-page-header")).toBeNull();
+  });
+  it("lets application panels own their chrome even on compact viewports", () => {
+    viewportState.compact = true;
+    renderPluginPanelRoute("/plugins/sales/tool/ws_1");
+
+    expect(screen.queryByTestId("app-page-header")).toBeNull();
+    expect(screen.getByText("Plugin panel body")).toBeTruthy();
   });
 });

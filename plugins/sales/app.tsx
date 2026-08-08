@@ -9,8 +9,10 @@ import {
   type PluginSidebarNavItemsProviderProps,
 } from "@bb/plugin-sdk/app";
 import { Button } from "@bb/shared-ui/button";
+import { Icon } from "@bb/shared-ui/icon";
 import { applyMutation, type Mutation, type Workspace } from "./src/model.js";
 import { ViewRenderer } from "./src/views.js";
+import { safeIcon } from "./src/generated-app.js";
 import type { salesRpcContract } from "./server.js";
 
 function useWorkspace(workspaceId: string) {
@@ -117,43 +119,97 @@ function WorkspaceSurface({
       </div>
     );
   }
+  const rowCount = workspace.collections.reduce(
+    (total, collection) => total + collection.rows.length,
+    0,
+  );
+  const updated = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(workspace.updatedAt));
   return (
     <section
       className={
         fullWidth
           ? "flex h-full min-h-0 flex-col bg-background"
-          : "overflow-hidden rounded-xl border bg-background shadow-sm"
+          : "overflow-hidden rounded-lg border border-border/80 bg-background shadow-[0_2px_8px_hsl(var(--foreground)/0.045)]"
       }
+      data-generated-app-surface={fullWidth ? "application" : "inline"}
     >
-      <header className="flex items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
-        <div>
-          <h3
+      <header
+        className={
+          fullWidth
+            ? "flex min-h-[68px] shrink-0 items-center justify-between gap-5 border-b bg-background px-6"
+            : "flex items-center justify-between gap-3 border-b bg-muted/15 px-4 py-3"
+        }
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div
             className={
               fullWidth
-                ? "text-lg font-semibold tracking-tight"
-                : "text-sm font-semibold tracking-tight"
+                ? "flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/30 text-foreground shadow-[0_1px_2px_hsl(var(--foreground)/0.04)]"
+                : "flex size-7 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground"
             }
           >
-            {workspace.title}
-          </h3>
-          {error ? (
-            <div className="mt-1 text-xs text-destructive">{error}</div>
-          ) : null}
+            <Icon
+              name={safeIcon(workspace.icon, "AppWindow")}
+              className={fullWidth ? "size-4.5" : "size-3.5"}
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1
+                className={
+                  fullWidth
+                    ? "truncate text-[15px] font-semibold tracking-[-0.012em]"
+                    : "truncate text-sm font-semibold tracking-[-0.01em]"
+                }
+              >
+                {workspace.title}
+              </h1>
+              {fullWidth ? (
+                <span className="hidden items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-300 sm:inline-flex">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  Synced
+                </span>
+              ) : null}
+            </div>
+            {fullWidth ? (
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                {workspace.description ??
+                  `${rowCount} records · Updated ${updated}`}
+              </p>
+            ) : null}
+            {error ? (
+              <div className="mt-1 text-xs text-destructive">{error}</div>
+            ) : null}
+          </div>
         </div>
-        <Button
-          size="sm"
-          variant={workspace.pinnedAt ? "secondary" : "default"}
-          onClick={() => setPinned(workspace.pinnedAt === null)}
-        >
-          {workspace.pinnedAt ? "Remove from sidebar" : "Add to sidebar"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button
+            size="sm"
+            variant={workspace.pinnedAt ? "ghost" : "default"}
+            className="h-8 rounded-md px-2.5 text-xs"
+            onClick={() => setPinned(workspace.pinnedAt === null)}
+          >
+            <Icon
+              name={workspace.pinnedAt ? "PinOff" : "Pin"}
+              className="mr-1.5 size-3.5"
+            />
+            {workspace.pinnedAt ? "Unpin" : "Add to sidebar"}
+          </Button>
+        </div>
       </header>
       <div
         className={
-          fullWidth ? "min-h-0 flex-1 overflow-auto p-5" : "overflow-x-auto p-4"
+          fullWidth
+            ? "min-h-0 flex-1 overflow-auto bg-muted/[0.12] p-5 lg:p-6"
+            : "overflow-x-auto p-3"
         }
       >
-        <div className="flex flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-5">
           {workspace.views.map((view) => (
             <ViewRenderer
               key={view.id}
@@ -243,6 +299,7 @@ export default definePluginApp((app) => {
     icon: "Kanban",
     path: "tool",
     sidebar: false,
+    surface: "application",
     component: GeneratedToolPanel,
   });
   app.slots.sidebarNavItems({

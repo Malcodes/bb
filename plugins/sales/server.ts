@@ -136,6 +136,7 @@ export default async function plugin(bb: BbPluginApi) {
       navOrder: all.filter((item) => item.pinnedAt).length,
       revision: 0,
       title: input.title,
+      description: input.description,
       icon: input.icon,
       createdAt: now,
       updatedAt: now,

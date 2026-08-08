@@ -835,6 +835,7 @@ describe("collectPluginAppRegistrations — dynamic primary navigation", () => {
         icon: "Kanban",
         path: "tool",
         sidebar: false,
+        surface: "application",
         component: Component,
       });
       app.slots.sidebarNavItems({
@@ -849,6 +850,7 @@ describe("collectPluginAppRegistrations — dynamic primary navigation", () => {
     expect(registrations.navPanels[0]).toMatchObject({
       id: "tool",
       sidebar: false,
+      surface: "application",
     });
     expect(registrations.sidebarNavItems).toEqual([
       {

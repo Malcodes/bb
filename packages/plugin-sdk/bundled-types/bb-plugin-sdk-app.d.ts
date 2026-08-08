@@ -420,6 +420,12 @@ interface PluginNavPanelRegistration {
     /** Whether this route also gets one static main-sidebar row. Default true. */
     sidebar?: boolean;
     /**
+     * Route host. "workspace" participates in bb's split/thread workspace;
+     * "application" owns the full app content region outside thread panes.
+     * Default: "workspace".
+     */
+    surface?: "workspace" | "application";
+    /**
      * Optional component rendered on the right side of the shared title bar
      * (e.g. a sync button or a count). Contained separately from the body: a
      * throwing headerContent is hidden without breaking the title bar.

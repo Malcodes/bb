@@ -7,12 +7,86 @@
 export type RowValue = string | number | boolean | null;
 export type Row = { id: string; [key: string]: RowValue };
 
+export type FieldType =
+  | "text"
+  | "multiline"
+  | "number"
+  | "currency"
+  | "date"
+  | "datetime"
+  | "select"
+  | "multi-select"
+  | "boolean"
+  | "url"
+  | "email"
+  | "person"
+  | "image"
+  | "badge";
+
+export type FieldMetadata = {
+  label?: string;
+  type?: FieldType;
+  icon?: string;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+  /** Semantic tone per stored value. */
+  toneMap?: Record<
+    string,
+    "neutral" | "info" | "success" | "warning" | "danger"
+  >;
+};
+
 export type Collection = {
   id: string;
   name: string;
   /** Field names in display order; every row should carry these keys. */
   fields: string[];
+  /** Reusable native formatting/editing metadata, keyed by field name. */
+  fieldMeta?: Record<string, FieldMetadata>;
   rows: Row[];
+};
+
+export type CardMetadataItem = {
+  field: string;
+  icon?: string;
+  format?: "text" | "relative-date" | "date" | "currency";
+};
+
+export type CardBadgeItem = {
+  field: string;
+  icon?: string;
+  tone?: "neutral" | "info" | "success" | "warning" | "danger";
+  toneMap?: Record<
+    string,
+    "neutral" | "info" | "success" | "warning" | "danger"
+  >;
+};
+
+export type KanbanPresentation = {
+  density?: "compact" | "comfortable";
+  card?: {
+    titleField?: string;
+    subtitleField?: string;
+    eyebrowField?: string;
+    avatar?: {
+      imageField?: string;
+      fallbackField?: string;
+      shape?: "circle" | "rounded";
+    };
+    metadata?: CardMetadataItem[];
+    badges?: CardBadgeItem[];
+  };
+  lanes?: {
+    iconMap?: Record<string, string>;
+    toneMap?: Record<
+      string,
+      "neutral" | "info" | "success" | "warning" | "danger"
+    >;
+  };
+  create?: { fields: string[] };
+  detail?: { sections: { title: string; fields: string[] }[] };
+  filters?: string[];
 };
 
 export type ViewConfig = {
@@ -37,6 +111,8 @@ export type ViewConfig = {
   timeField?: string;
   /** metrics: headline numbers computed by the agent. */
   items?: { label: string; value: string; hint?: string }[];
+  /** Reusable native presentation vocabulary; currently richest for Kanban. */
+  presentation?: KanbanPresentation;
 };
 
 export type View = {
@@ -57,6 +133,7 @@ export type Workspace = {
   /** Monotonic optimistic-concurrency revision. */
   revision: number;
   title: string;
+  description?: string;
   icon?: string;
   createdAt: string;
   updatedAt: string;

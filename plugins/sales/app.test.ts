@@ -13,6 +13,7 @@ describe("generated Sales tool registrations", () => {
       id: "generated-tool",
       path: "tool",
       sidebar: false,
+      surface: "application",
     });
     expect(app.sidebarNavItems).toHaveLength(1);
     expect(app.sidebarNavItems[0]).toMatchObject({

@@ -9,6 +9,8 @@ import type { PaneContent } from "@/lib/split-layout";
 import { useRouteState } from "@/hooks/useRouteState";
 import { LegacyProjectComposeRedirect } from "./RootComposeView";
 import { SplitThreadArea } from "./thread-detail/SplitThreadArea";
+import { PluginPanelView } from "./PluginPanelView";
+import { usePluginSlots } from "@/lib/plugin-slots";
 
 const ROOT_COMPOSE_CONTENT = { kind: "new-thread" } as const;
 
@@ -22,6 +24,7 @@ const ROOT_COMPOSE_CONTENT = { kind: "new-thread" } as const;
 export default function SplitWorkspaceRoute() {
   const location = useLocation();
   const { projectId, threadId, isThreadView } = useRouteState();
+  const { navPanels } = usePluginSlots();
   const pluginMatch = matchPath(PLUGIN_PANEL_ROUTE_PATH, location.pathname);
   const legacyProjectMatch = matchPath(
     LEGACY_PROJECT_COMPOSE_ROUTE_PATH,
@@ -60,6 +63,24 @@ export default function SplitWorkspaceRoute() {
   const legacyProjectId = legacyProjectMatch?.params.projectId;
   if (legacyProjectId) {
     return <LegacyProjectComposeRedirect projectId={legacyProjectId} />;
+  }
+  const applicationPanel =
+    pluginId && panelPath
+      ? navPanels.find(
+          (panel) =>
+            panel.pluginId === pluginId &&
+            panel.path === panelPath &&
+            panel.surface === "application",
+        )
+      : undefined;
+  if (applicationPanel) {
+    return (
+      <PluginPanelView
+        pluginId={pluginId}
+        panelPath={panelPath}
+        subPath={pluginSubPath}
+      />
+    );
   }
   if (routeContent === null) {
     return <Navigate to={APP_ROOT_ROUTE_PATH} replace />;

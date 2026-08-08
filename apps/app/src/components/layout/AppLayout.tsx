@@ -573,6 +573,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const showHeader =
     !isThreadView &&
     !isRootView &&
+    pluginPanel?.surface !== "application" &&
     !(splitWorkspaceActive && pluginPanelMatch !== null);
   const [desktopInfo] = useState(getBbDesktopInfo);
   const desktopWindowState = useDesktopWindowState();

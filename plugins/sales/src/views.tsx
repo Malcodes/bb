@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useDraggable,
@@ -12,11 +13,13 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { Badge } from "@bb/shared-ui/badge";
 import { Button } from "@bb/shared-ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@bb/shared-ui/card";
 import { Input } from "@bb/shared-ui/input";
+import { Icon } from "@bb/shared-ui/icon";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +37,18 @@ import {
   TableRow,
 } from "@bb/shared-ui/table";
 import type { Collection, Mutation, Row, RowValue, View } from "./model.js";
+import {
+  EntityAvatar,
+  FieldControl,
+  GeneratedAppToolbar,
+  MetadataItem,
+  SemanticBadge,
+  fieldLabel,
+  recordDraft,
+  resolveTone,
+  safeIcon,
+  valueText,
+} from "./generated-app.js";
 
 export type Mutate = (mutations: Mutation[]) => void;
 
@@ -80,17 +95,142 @@ function AddRowForm({ onAdd }: { onAdd: (title: string) => void }) {
   );
 }
 
+function displayMetadata(
+  value: string,
+  format?: "text" | "relative-date" | "date" | "currency",
+): string {
+  if (!value) return "";
+  if (format === "currency") {
+    const amount = Number(value.replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(amount)
+      ? new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+        }).format(amount)
+      : value;
+  }
+  if (format === "date" || format === "relative-date") {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      if (format === "date")
+        return new Intl.DateTimeFormat(undefined, {
+          month: "short",
+          day: "numeric",
+        }).format(date);
+      const days = Math.round((date.getTime() - Date.now()) / 86_400_000);
+      if (days === 0) return "Today";
+      if (days === -1) return "Yesterday";
+      if (days === 1) return "Tomorrow";
+      return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(
+        days,
+        "day",
+      );
+    }
+  }
+  return value;
+}
+
+function KanbanCardContent({
+  row,
+  collection,
+  view,
+}: {
+  row: Row;
+  collection: Collection;
+  view: View;
+}) {
+  const presentation = view.config.presentation;
+  const card = presentation?.card;
+  const titleField = fieldFor(
+    collection,
+    card?.titleField ?? view.config.titleField,
+    ["company", "name", "title", "account"],
+  );
+  const subtitleField = card?.subtitleField ?? view.config.subField;
+  const eyebrow = card?.eyebrowField ? valueText(row[card.eyebrowField]) : "";
+  const avatar = card?.avatar;
+  const fallback = valueText(row[avatar?.fallbackField ?? titleField]);
+  const image = avatar?.imageField ? valueText(row[avatar.imageField]) : "";
+  const metadata = card?.metadata ?? [];
+  const badges =
+    card?.badges ??
+    (view.config.flagField ? [{ field: view.config.flagField }] : []);
+  return (
+    <>
+      {eyebrow ? (
+        <div className="mb-2 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+          {eyebrow}
+        </div>
+      ) : null}
+      <div className="flex min-w-0 items-start gap-2.5">
+        {avatar ? (
+          <EntityAvatar
+            image={image || undefined}
+            fallback={fallback}
+            shape={avatar.shape}
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold leading-5 tracking-[-0.01em] text-foreground">
+            {valueText(row[titleField]) || "Untitled"}
+          </div>
+          {subtitleField && valueText(row[subtitleField]) ? (
+            <div className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground">
+              {valueText(row[subtitleField])}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      {metadata.length ? (
+        <div className="mt-3 grid gap-1.5 border-t border-border/60 pt-2.5">
+          {metadata.map((item) => {
+            const value = displayMetadata(
+              valueText(row[item.field]),
+              item.format,
+            );
+            return value ? (
+              <MetadataItem key={item.field} icon={item.icon}>
+                {value}
+              </MetadataItem>
+            ) : null;
+          })}
+        </div>
+      ) : null}
+      {badges.length ? (
+        <div className="mt-2.5 flex flex-wrap gap-1">
+          {badges.map((badge) => {
+            const value = valueText(row[badge.field]);
+            return (
+              <SemanticBadge
+                key={badge.field}
+                value={value}
+                icon={badge.icon}
+                tone={resolveTone(
+                  collection,
+                  badge.field,
+                  value,
+                  badge.tone,
+                  badge.toneMap,
+                )}
+              />
+            );
+          })}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function KanbanCard({
   row,
-  titleField,
-  subField,
-  flagField,
+  collection,
+  view,
   onOpen,
 }: {
   row: Row;
-  titleField: string;
-  subField: string;
-  flagField?: string;
+  collection: Collection;
+  view: View;
   onOpen(): void;
 }) {
   const drag = useDraggable({ id: row.id });
@@ -102,22 +242,20 @@ function KanbanCard({
           ? `translate3d(${drag.transform.x}px, ${drag.transform.y}px, 0)`
           : undefined,
       }}
-      {...drag.listeners}
-      {...drag.attributes}
       onClick={onOpen}
-      className={`cursor-grab p-3 transition-shadow hover:shadow-sm active:cursor-grabbing ${drag.isDragging ? "z-20 opacity-70 shadow-lg" : ""}`}
+      className={`group relative rounded-lg border-border/80 bg-card p-3 shadow-[0_1px_2px_hsl(var(--foreground)/0.035)] transition-[border-color,box-shadow,opacity] duration-150 hover:border-border hover:shadow-[0_3px_10px_hsl(var(--foreground)/0.07)] focus-within:ring-2 focus-within:ring-ring/30 ${drag.isDragging ? "opacity-25" : ""}`}
     >
-      <div className="text-sm font-medium leading-tight">
-        {str(row[titleField])}
-      </div>
-      <div className="mt-1 text-xs text-muted-foreground">
-        {str(row[subField])}
-      </div>
-      {flagField && row[flagField] ? (
-        <Badge variant="destructive" className="mt-2 text-[10px]">
-          {str(row[flagField])}
-        </Badge>
-      ) : null}
+      <button
+        type="button"
+        aria-label="Drag card"
+        {...drag.listeners}
+        {...drag.attributes}
+        onClick={(event) => event.stopPropagation()}
+        className="absolute right-2 top-2 flex size-6 cursor-grab items-center justify-center rounded opacity-0 text-muted-foreground transition-opacity hover:bg-muted group-hover:opacity-100 focus:opacity-100 active:cursor-grabbing"
+      >
+        <Icon name="DragDropVertical" className="size-3.5" />
+      </button>
+      <KanbanCardContent row={row} collection={collection} view={view} />
     </Card>
   );
 }
@@ -125,53 +263,160 @@ function KanbanCard({
 function KanbanLane({
   lane,
   rows,
-  titleField,
-  subField,
-  flagField,
+  collection,
+  view,
   onOpen,
-  onAdd,
+  onRequestAdd,
 }: {
   lane: string;
   rows: Row[];
-  titleField: string;
-  subField: string;
-  flagField?: string;
+  collection: Collection;
+  view: View;
   onOpen(row: Row): void;
-  onAdd(title: string): void;
+  onRequestAdd(): void;
 }) {
   const drop = useDroppable({ id: `lane:${lane}` });
+  const lanePresentation = view.config.presentation?.lanes;
+  const tone = lanePresentation?.toneMap?.[lane] ?? "neutral";
+  const toneClass = {
+    neutral: "bg-muted-foreground/50",
+    info: "bg-blue-500",
+    success: "bg-emerald-500",
+    warning: "bg-amber-500",
+    danger: "bg-red-500",
+  }[tone];
+  const icon = lanePresentation?.iconMap?.[lane]
+    ? safeIcon(lanePresentation.iconMap[lane])
+    : undefined;
   return (
-    <div
+    <section
       ref={drop.setNodeRef}
-      className={`min-w-56 rounded-lg p-2 transition-colors ${drop.isOver ? "bg-accent ring-1 ring-primary/30" : "bg-muted/50"}`}
+      className={`flex w-[292px] min-w-[292px] flex-col rounded-lg border border-transparent bg-muted/35 transition-[background-color,border-color] duration-150 ${drop.isOver ? "border-primary/25 bg-primary/[0.045]" : ""}`}
     >
-      <div className="mb-2 flex items-center justify-between px-1">
-        <span className="text-xs font-medium text-muted-foreground">
-          {lane || "(none)"}
-        </span>
-        <Badge variant="secondary" className="text-[10px]">
+      <header className="sticky top-0 z-10 flex h-11 items-center gap-2 rounded-t-lg bg-muted/90 px-3 supports-[backdrop-filter]:backdrop-blur-sm">
+        <span className={`size-1.5 rounded-full ${toneClass}`} />
+        {icon ? (
+          <Icon name={icon} className="size-3.5 text-muted-foreground" />
+        ) : null}
+        <h3 className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground/90">
+          {lane || "Unassigned"}
+        </h3>
+        <span className="min-w-5 rounded bg-background/70 px-1.5 py-0.5 text-center text-[10px] font-medium tabular-nums text-muted-foreground">
           {rows.length}
-        </Badge>
-      </div>
-      <div className="flex flex-col gap-2">
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRequestAdd}
+          className="size-6 rounded-md text-muted-foreground"
+          aria-label={`Add card to ${lane}`}
+        >
+          <Icon name="Plus" className="size-3.5" />
+        </Button>
+      </header>
+      <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2">
         {rows.map((row) => (
           <KanbanCard
             key={row.id}
             row={row}
-            titleField={titleField}
-            subField={subField}
-            flagField={flagField}
+            collection={collection}
+            view={view}
             onOpen={() => onOpen(row)}
           />
         ))}
         {rows.length === 0 ? (
-          <div className="px-1 py-3 text-center text-xs text-muted-foreground/60">
-            Drop here
-          </div>
+          <button
+            type="button"
+            onClick={onRequestAdd}
+            className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border/70 text-[11px] text-muted-foreground transition-colors hover:border-border hover:bg-background/50"
+          >
+            Add first card
+          </button>
         ) : null}
       </div>
-      <AddRowForm onAdd={onAdd} />
-    </div>
+    </section>
+  );
+}
+
+function RecordFormDialog({
+  open,
+  title,
+  description,
+  collection,
+  fields,
+  sections,
+  initial,
+  submitLabel,
+  onOpenChange,
+  onSubmit,
+  onDelete,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  collection: Collection;
+  fields: string[];
+  sections?: { title: string; fields: string[] }[];
+  initial: Record<string, string>;
+  submitLabel: string;
+  onOpenChange(open: boolean): void;
+  onSubmit(values: Record<string, string>): void;
+  onDelete?: () => void;
+}) {
+  const [values, setValues] = useState(initial);
+  useEffect(() => setValues(initial), [initial, open]);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-base">{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <div className="grid max-h-[58vh] gap-5 overflow-y-auto py-1 pr-1">
+          {(sections?.length ? sections : [{ title: "Details", fields }]).map(
+            (section) => (
+              <section key={section.title} className="grid gap-3">
+                {sections?.length ? (
+                  <div className="border-b pb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                    {section.title}
+                  </div>
+                ) : null}
+                {section.fields.map((field) => (
+                  <FieldControl
+                    key={field}
+                    field={field}
+                    meta={collection.fieldMeta?.[field]}
+                    value={values[field] ?? ""}
+                    onChange={(value) =>
+                      setValues((current) => ({ ...current, [field]: value }))
+                    }
+                  />
+                ))}
+              </section>
+            ),
+          )}
+        </div>
+        <DialogFooter className="gap-2 sm:justify-between">
+          {onDelete ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onDelete}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Icon name="Trash2" className="mr-1.5 size-3.5" />
+              Delete
+            </Button>
+          ) : (
+            <span />
+          )}
+          <Button type="button" onClick={() => onSubmit(values)}>
+            {submitLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -187,61 +432,65 @@ function KanbanView({
   workspaceId: string;
 }) {
   const { config } = view;
+  const presentation = config.presentation;
   const groupBy = config.groupBy ?? "stage";
-  const titleField = fieldFor(collection, config.titleField, [
-    "company",
-    "name",
-    "title",
-    "account",
-  ]);
-  const subField =
-    config.subField ??
-    collection.fields.find(
-      (field) => field !== titleField && field !== groupBy,
-    ) ??
-    titleField;
-  const flagField = config.flagField;
+  const titleField = fieldFor(
+    collection,
+    presentation?.card?.titleField ?? config.titleField,
+    ["company", "name", "title", "account"],
+  );
   const lanes = useMemo(() => {
     const explicit = config.lanes ?? [];
     const seen = new Set(explicit);
     const rest = collection.rows
-      .map((row) => str(row[groupBy]))
+      .map((row) => valueText(row[groupBy]))
       .filter((value) => value && !seen.has(value));
     return [...explicit, ...Array.from(new Set(rest))];
   }, [config.lanes, collection.rows, groupBy]);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
   );
-  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [createLane, setCreateLane] = useState<string | null>(null);
   const selected = collection.rows.find((row) => row.id === selectedId) ?? null;
-  const [draft, setDraft] = useState<Record<string, string>>({});
-  useEffect(() => {
-    if (!selected) return;
-    setDraft(
-      Object.fromEntries(
-        collection.fields.map((field) => [field, str(selected[field])]),
-      ),
-    );
-  }, [collection.fields, selected]);
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return collection.rows;
-    return collection.rows.filter((row) =>
-      Object.values(row).some((value) =>
-        str(value).toLowerCase().includes(query),
-      ),
-    );
-  }, [collection.rows, search]);
+  const active = collection.rows.find((row) => row.id === activeId) ?? null;
+  const createFields = (presentation?.create?.fields ?? [titleField]).filter(
+    (field) => field !== groupBy && collection.fields.includes(field),
+  );
+  const detailFields =
+    presentation?.detail?.sections.flatMap((section) => section.fields) ??
+    collection.fields.slice(0, 6);
+  const visibleRows = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return collection.rows.filter((row) => {
+      if (
+        normalized &&
+        !Object.values(row).some((value) =>
+          valueText(value).toLowerCase().includes(normalized),
+        )
+      )
+        return false;
+      return Object.entries(filters).every(
+        ([field, value]) => !value || valueText(row[field]) === value,
+      );
+    });
+  }, [collection.rows, filters, query]);
 
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
   function handleDragEnd(event: DragEndEvent) {
     const rowId = String(event.active.id);
     const over = event.over ? String(event.over.id) : "";
+    setActiveId(null);
     if (!over.startsWith("lane:")) return;
     const lane = over.slice(5);
     const row = collection.rows.find((item) => item.id === rowId);
-    if (!row || str(row[groupBy]) === lane) return;
+    if (!row || valueText(row[groupBy]) === lane) return;
     mutate([
       {
         op: "moveRow",
@@ -254,88 +503,147 @@ function KanbanView({
     ]);
   }
 
+  const filterControls = (presentation?.filters ?? []).map((field) => {
+    const options =
+      collection.fieldMeta?.[field]?.options ??
+      Array.from(
+        new Set(
+          collection.rows.map((row) => valueText(row[field])).filter(Boolean),
+        ),
+      );
+    return (
+      <select
+        key={field}
+        value={filters[field] ?? ""}
+        onChange={(event) =>
+          setFilters((current) => ({ ...current, [field]: event.target.value }))
+        }
+        className="h-7 rounded-md border border-border bg-background px-2 text-[11px] text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+        aria-label={`Filter by ${fieldLabel(field, collection.fieldMeta?.[field])}`}
+      >
+        <option value="">
+          All {fieldLabel(field, collection.fieldMeta?.[field]).toLowerCase()}
+        </option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    );
+  });
+
   return (
-    <div>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-sm font-medium">{view.title}</div>
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search cards…"
-          className="h-8 w-52 text-xs"
-        />
-      </div>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="min-w-0 overflow-hidden rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)]">
+      <GeneratedAppToolbar
+        query={query}
+        onQueryChange={setQuery}
+        placeholder={`Search ${collection.name.toLowerCase()}…`}
+        filters={<>{filterControls}</>}
+        trailing={
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {visibleRows.length} records
+          </span>
+        }
+      />
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveId(null)}
+      >
+        <div className="flex min-h-[420px] gap-3 overflow-x-auto bg-muted/10 p-3">
           {lanes.map((lane) => (
             <KanbanLane
               key={lane}
               lane={lane}
-              rows={filteredRows.filter((row) => str(row[groupBy]) === lane)}
-              titleField={titleField}
-              subField={subField}
-              flagField={flagField}
+              rows={visibleRows.filter(
+                (row) => valueText(row[groupBy]) === lane,
+              )}
+              collection={collection}
+              view={view}
               onOpen={(row) => setSelectedId(row.id)}
-              onAdd={(title) =>
-                mutate([
-                  {
-                    op: "addRow",
-                    workspaceId,
-                    collectionId: collection.id,
-                    row: {
-                      id: `r_${Date.now().toString(36)}`,
-                      [titleField]: title,
-                      [groupBy]: lane,
-                    },
-                  },
-                ])
-              }
+              onRequestAdd={() => setCreateLane(lane)}
             />
           ))}
         </div>
+        <DragOverlay
+          dropAnimation={{
+            duration: 160,
+            easing: "cubic-bezier(0.2, 0, 0, 1)",
+          }}
+        >
+          {active ? (
+            <Card className="w-[276px] rotate-[0.3deg] rounded-lg border-primary/20 bg-card p-3 shadow-xl">
+              <KanbanCardContent
+                row={active}
+                collection={collection}
+                view={view}
+              />
+            </Card>
+          ) : null}
+        </DragOverlay>
       </DndContext>
-      <Dialog
+      <RecordFormDialog
+        open={createLane !== null}
+        title={`Add to ${createLane ?? "lane"}`}
+        description={`Create a concise ${collection.name.toLowerCase()} record. You can add more detail later.`}
+        collection={collection}
+        fields={createFields}
+        initial={recordDraft(collection, null, createFields)}
+        submitLabel="Add card"
+        onOpenChange={(open) => {
+          if (!open) setCreateLane(null);
+        }}
+        onSubmit={(values) => {
+          if (!createLane) return;
+          mutate([
+            {
+              op: "addRow",
+              workspaceId,
+              collectionId: collection.id,
+              row: {
+                id: `r_${Date.now().toString(36)}`,
+                ...values,
+                [groupBy]: createLane,
+              },
+            },
+          ]);
+          setCreateLane(null);
+        }}
+      />
+      <RecordFormDialog
         open={selected !== null}
+        title={
+          selected
+            ? valueText(selected[titleField]) || "Card details"
+            : "Card details"
+        }
+        description="Edit the fields that matter for this workflow. Changes synchronize everywhere."
+        collection={collection}
+        fields={detailFields}
+        sections={presentation?.detail?.sections}
+        initial={recordDraft(collection, selected, detailFields)}
+        submitLabel="Save changes"
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {selected
-                ? str(selected[titleField]) || "Card details"
-                : "Card details"}
-            </DialogTitle>
-            <DialogDescription>
-              Edit fields on this persistent record. Changes synchronize
-              everywhere.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid max-h-[55vh] gap-3 overflow-auto py-1">
-            {collection.fields.map((field) => (
-              <label
-                key={field}
-                className="grid gap-1 text-xs font-medium text-muted-foreground"
-              >
-                {field}
-                <Input
-                  value={draft[field] ?? ""}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      [field]: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-            ))}
-          </div>
-          <DialogFooter className="gap-2 sm:justify-between">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (!selected) return;
+        onSubmit={(values) => {
+          if (!selected) return;
+          mutate([
+            {
+              op: "patchRow",
+              workspaceId,
+              collectionId: collection.id,
+              rowId: selected.id,
+              patch: values,
+            },
+          ]);
+          setSelectedId(null);
+        }}
+        onDelete={
+          selected
+            ? () => {
                 mutate([
                   {
                     op: "removeRow",
@@ -345,30 +653,10 @@ function KanbanView({
                   },
                 ]);
                 setSelectedId(null);
-              }}
-            >
-              Delete card
-            </Button>
-            <Button
-              onClick={() => {
-                if (!selected) return;
-                mutate([
-                  {
-                    op: "patchRow",
-                    workspaceId,
-                    collectionId: collection.id,
-                    rowId: selected.id,
-                    patch: draft,
-                  },
-                ]);
-                setSelectedId(null);
-              }}
-            >
-              Save changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }
