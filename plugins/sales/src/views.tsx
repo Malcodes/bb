@@ -1063,26 +1063,97 @@ function TimelineView({
   );
 }
 
-function MetricsView({ view }: { view: View }) {
-  const items = view.config.items ?? [];
+function metricMatches(
+  row: Row,
+  filters: NonNullable<NonNullable<View["config"]["metrics"]>[number]["where"]>,
+): boolean {
+  return filters.every((filter) => {
+    const actual = row[filter.field] ?? null;
+    const operator = filter.operator ?? "equals";
+    if (operator === "truthy") return Boolean(actual);
+    if (operator === "equals") return actual === (filter.value ?? null);
+    if (operator === "notEquals") return actual !== (filter.value ?? null);
+    const values = filter.values ?? [];
+    if (operator === "in") return values.includes(actual);
+    return !values.includes(actual);
+  });
+}
+
+export function computeMetricValues(
+  view: View,
+  collection: Collection | undefined,
+) {
+  if (!view.config.metrics?.length || !collection) {
+    return (view.config.items ?? []).map((item, index) => ({
+      id: `legacy-${index}`,
+      label: item.label,
+      value: item.value,
+      hint: item.hint,
+    }));
+  }
+  return view.config.metrics.map((metric) => {
+    const rows = collection.rows.filter((row) =>
+      metricMatches(row, metric.where ?? []),
+    );
+    let raw: number;
+    if (metric.operation === "count") {
+      raw = rows.length;
+    } else {
+      const values = rows
+        .map((row) => Number(row[metric.field ?? ""] ?? 0))
+        .filter(Number.isFinite);
+      const total = values.reduce((sum, value) => sum + value, 0);
+      raw =
+        metric.operation === "average" && values.length > 0
+          ? total / values.length
+          : total;
+    }
+    const value =
+      metric.format === "currency"
+        ? new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+          }).format(raw)
+        : metric.format === "percent"
+          ? new Intl.NumberFormat(undefined, {
+              style: "percent",
+              maximumFractionDigits: 1,
+            }).format(raw)
+          : new Intl.NumberFormat().format(raw);
+    return {
+      id: metric.id,
+      label: metric.label,
+      value,
+      hint: metric.hint,
+    };
+  });
+}
+
+function MetricsView({
+  view,
+  collection,
+}: {
+  view: View;
+  collection?: Collection;
+}) {
+  const items = computeMetricValues(view, collection);
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {items.map((m) => (
-        <Card key={m.label}>
-          <CardHeader className="p-4 pb-1">
-            <div className="text-xs text-muted-foreground">{m.label}</div>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-semibold tracking-tight">
-              {m.value}
+    <div className="grid grid-cols-2 divide-x divide-border/70 rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)] sm:grid-cols-4">
+      {items.map((metric) => (
+        <div key={metric.id} className="min-w-0 px-4 py-3.5">
+          <div className="truncate text-[11px] font-medium text-muted-foreground">
+            {metric.label}
+          </div>
+          <div className="mt-1 text-xl font-semibold tracking-[-0.025em] tabular-nums">
+            {metric.value}
+          </div>
+          {metric.hint ? (
+            <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+              {metric.hint}
             </div>
-            {m.hint && (
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {m.hint}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          ) : null}
+        </div>
       ))}
     </div>
   );
@@ -1097,10 +1168,12 @@ export function ViewRenderer({
   workspace: { id: string; collections: Collection[] };
   mutate: Mutate;
 }) {
-  if (view.primitive === "metrics") return <MetricsView view={view} />;
   const collection =
     workspace.collections.find((c) => c.id === view.collectionId) ??
     workspace.collections[0];
+  if (view.primitive === "metrics") {
+    return <MetricsView view={view} collection={collection} />;
+  }
   if (!collection) return null;
   switch (view.primitive) {
     case "kanban":

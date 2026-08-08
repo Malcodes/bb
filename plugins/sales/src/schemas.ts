@@ -131,6 +131,29 @@ export const collectionSchema = z.object({
   rows: z.array(rowSchema),
 });
 
+const metricFilterSchema = z
+  .object({
+    field: z.string().min(1),
+    operator: z
+      .enum(["equals", "notEquals", "in", "notIn", "truthy"])
+      .optional(),
+    value: rowValueSchema.optional(),
+    values: z.array(rowValueSchema).optional(),
+  })
+  .strict();
+
+const metricComputationSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    operation: z.enum(["count", "sum", "average"]),
+    field: z.string().optional(),
+    where: z.array(metricFilterSchema).max(8).optional(),
+    format: z.enum(["number", "currency", "percent"]).optional(),
+    hint: z.string().optional(),
+  })
+  .strict();
+
 export const viewConfigSchema = z
   .object({
     groupBy: z.string().optional(),
@@ -144,6 +167,7 @@ export const viewConfigSchema = z
     flagField: z.string().optional(),
     timeField: z.string().optional(),
     presentation: kanbanPresentationSchema.optional(),
+    metrics: z.array(metricComputationSchema).max(12).optional(),
     items: z
       .array(
         z.object({

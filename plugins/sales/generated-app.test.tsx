@@ -6,7 +6,7 @@ import {
   FieldControl,
   SemanticBadge,
 } from "./src/generated-app.js";
-import { ViewRenderer } from "./src/views.js";
+import { computeMetricValues, ViewRenderer } from "./src/views.js";
 import type { Workspace } from "./src/model.js";
 
 beforeAll(() => {
@@ -140,4 +140,64 @@ describe("native generated-app vocabulary", () => {
       screen.getByRole("button", { name: "Add card to Contacted" }),
     ).toBeDefined();
   });
+});
+
+it("recomputes declarative metrics from the current persistent collection rows", () => {
+  const collection = {
+    id: "opportunities",
+    name: "Opportunities",
+    fields: ["company", "stage", "priority"],
+    rows: [
+      { id: "r1", company: "A", stage: "Offer", priority: "High" },
+      { id: "r2", company: "B", stage: "Interviewing", priority: "Medium" },
+      { id: "r3", company: "C", stage: "Contacted", priority: "High" },
+    ],
+  };
+  const view = {
+    id: "metrics",
+    primitive: "metrics" as const,
+    title: "Summary",
+    collectionId: "opportunities",
+    config: {
+      metrics: [
+        {
+          id: "offer",
+          label: "Offer",
+          operation: "count" as const,
+          where: [
+            { field: "stage", operator: "equals" as const, value: "Offer" },
+          ],
+        },
+        {
+          id: "late",
+          label: "Late Stage",
+          operation: "count" as const,
+          where: [
+            {
+              field: "stage",
+              operator: "in" as const,
+              values: ["Interviewing", "Offer"],
+            },
+          ],
+        },
+        {
+          id: "high",
+          label: "High Priority",
+          operation: "count" as const,
+          where: [
+            { field: "priority", operator: "equals" as const, value: "High" },
+          ],
+        },
+      ],
+    },
+  };
+
+  expect(
+    computeMetricValues(view, collection).map((metric) => metric.value),
+  ).toEqual(["1", "2", "2"]);
+  collection.rows[1]!.stage = "Offer";
+  collection.rows[2]!.stage = "Offer";
+  expect(
+    computeMetricValues(view, collection).map((metric) => metric.value),
+  ).toEqual(["3", "3", "2"]);
 });

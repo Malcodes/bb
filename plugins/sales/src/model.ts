@@ -89,6 +89,23 @@ export type KanbanPresentation = {
   filters?: string[];
 };
 
+export type MetricFilter = {
+  field: string;
+  operator?: "equals" | "notEquals" | "in" | "notIn" | "truthy";
+  value?: RowValue;
+  values?: RowValue[];
+};
+
+export type MetricComputation = {
+  id: string;
+  label: string;
+  operation: "count" | "sum" | "average";
+  field?: string;
+  where?: MetricFilter[];
+  format?: "number" | "currency" | "percent";
+  hint?: string;
+};
+
 export type ViewConfig = {
   /** kanban: field whose distinct values define lanes. */
   groupBy?: string;
@@ -109,8 +126,10 @@ export type ViewConfig = {
   flagField?: string;
   /** timeline: field used for the time/ordering column. */
   timeField?: string;
-  /** metrics: headline numbers computed by the agent. */
+  /** Legacy static metrics; prefer live computations below. */
   items?: { label: string; value: string; hint?: string }[];
+  /** Declarative metrics recomputed from collection rows on every render. */
+  metrics?: MetricComputation[];
   /** Reusable native presentation vocabulary; currently richest for Kanban. */
   presentation?: KanbanPresentation;
 };
@@ -166,6 +185,132 @@ export type Mutation =
     }
   | { op: "reorderViews"; workspaceId: string; viewIds: string[] }
   | { op: "renameWorkspace"; workspaceId: string; title: string };
+
+/**
+ * Upgrade the known snapshot metric vocabulary emitted by the earlier agent
+ * contract. New workspaces must author explicit computations; this keeps
+ * existing accepted tools live without deleting or recreating them.
+ */
+export function upgradeLegacyMetrics(workspace: Workspace): boolean {
+  let changed = false;
+  for (const view of workspace.views) {
+    if (
+      view.primitive !== "metrics" ||
+      view.config.metrics?.length ||
+      !view.config.items?.length
+    ) {
+      continue;
+    }
+    const collection =
+      workspace.collections.find(
+        (candidate) => candidate.id === view.collectionId,
+      ) ?? workspace.collections[0];
+    if (!collection) continue;
+    const field = (names: string[]) =>
+      collection.fields.find((candidate) =>
+        names.includes(candidate.toLowerCase().replace(/[ _-]/g, "")),
+      );
+    const stageField = field([
+      "stage",
+      "status",
+      "pipeline stage".replace(/ /g, ""),
+    ]);
+    const priorityField = field(["priority", "tier"]);
+    const stageValues = stageField
+      ? Array.from(
+          new Set(
+            collection.rows
+              .map((row) => row[stageField])
+              .filter((value): value is string => typeof value === "string"),
+          ),
+        )
+      : [];
+    const actual = (wanted: string) =>
+      stageValues.find(
+        (value) => value.toLowerCase() === wanted.toLowerCase(),
+      ) ?? wanted;
+    const computations: MetricComputation[] = [];
+    for (const item of view.config.items) {
+      const label = item.label.trim().toLowerCase();
+      if (label.includes("offer") && stageField) {
+        computations.push({
+          id: "offer",
+          label: item.label,
+          operation: "count",
+          where: [
+            {
+              field: stageField,
+              operator: "equals",
+              value: actual("Offer"),
+            },
+          ],
+          hint: item.hint,
+        });
+      } else if (label.includes("late stage") && stageField) {
+        computations.push({
+          id: "late-stage",
+          label: item.label,
+          operation: "count",
+          where: [
+            {
+              field: stageField,
+              operator: "in",
+              values: [actual("Interviewing"), actual("Offer")],
+            },
+          ],
+          hint: item.hint,
+        });
+      } else if (label.includes("high priority") && priorityField) {
+        computations.push({
+          id: "high-priority",
+          label: item.label,
+          operation: "count",
+          where: [
+            {
+              field: priorityField,
+              operator: "equals",
+              value:
+                collection.rows
+                  .map((row) => row[priorityField])
+                  .find(
+                    (value) =>
+                      typeof value === "string" &&
+                      value.toLowerCase() === "high",
+                  ) ?? "High",
+            },
+          ],
+          hint: item.hint,
+        });
+      } else if (label.includes("active pipeline") && stageField) {
+        computations.push({
+          id: "active-pipeline",
+          label: item.label,
+          operation: "count",
+          where: [
+            {
+              field: stageField,
+              operator: "notIn",
+              values: [
+                actual("Closed won"),
+                actual("Closed lost"),
+                actual("Rejected"),
+                actual("Withdrawn"),
+              ],
+            },
+          ],
+          hint: item.hint,
+        });
+      }
+    }
+    if (computations.length === view.config.items.length) {
+      view.config.metrics = computations;
+      delete view.config.items;
+      if (!view.collectionId) view.collectionId = collection.id;
+      changed = true;
+    }
+  }
+  return changed;
+}
 
 /** Apply one mutation to a workspace in place. Returns false if no-op. */
 export function applyMutation(ws: Workspace, m: Mutation): boolean {

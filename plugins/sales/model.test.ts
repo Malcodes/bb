@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyMutation, newId, type Workspace } from "./src/model.js";
+import {
+  applyMutation,
+  newId,
+  upgradeLegacyMetrics,
+  type Workspace,
+} from "./src/model.js";
 
 function sample(): Workspace {
   return {
@@ -125,6 +130,35 @@ describe("applyMutation", () => {
         value: "X",
       }),
     ).toBe(false);
+  });
+
+  it("upgrades known legacy metric snapshots to live collection computations", () => {
+    const ws = sample();
+    ws.collections[0]!.fields.push("priority");
+    ws.collections[0]!.rows[0]!.priority = "High";
+    ws.views.unshift({
+      id: "summary",
+      primitive: "metrics",
+      title: "Summary",
+      collectionId: "prospects",
+      config: {
+        items: [
+          { label: "Active Pipeline", value: "99" },
+          { label: "High Priority", value: "99" },
+          { label: "Late Stage", value: "99" },
+          { label: "Offer", value: "1" },
+        ],
+      },
+    });
+
+    expect(upgradeLegacyMetrics(ws)).toBe(true);
+    expect(ws.views[0]!.config.items).toBeUndefined();
+    expect(ws.views[0]!.config.metrics?.map((metric) => metric.id)).toEqual([
+      "active-pipeline",
+      "high-priority",
+      "late-stage",
+      "offer",
+    ]);
   });
 
   it("newId generates unique ids", () => {

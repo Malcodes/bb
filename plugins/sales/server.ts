@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   applyMutation,
   newId,
+  upgradeLegacyMetrics,
   type Mutation,
   type Workspace,
 } from "./src/model.js";
@@ -79,14 +80,20 @@ export default async function plugin(bb: BbPluginApi) {
         WORKSPACES_KEY,
       )) ?? [];
     // Non-destructive migration from the thread-contained prototype.
-    return raw.map((ws, index) => ({
-      ...ws,
-      originThreadId:
-        ws.originThreadId ?? (ws as { threadId?: string }).threadId ?? "legacy",
-      pinnedAt: ws.pinnedAt ?? null,
-      navOrder: ws.navOrder ?? index,
-      revision: ws.revision ?? 0,
-    })) as Workspace[];
+    return raw.map((ws, index) => {
+      const workspace = {
+        ...ws,
+        originThreadId:
+          ws.originThreadId ??
+          (ws as { threadId?: string }).threadId ??
+          "legacy",
+        pinnedAt: ws.pinnedAt ?? null,
+        navOrder: ws.navOrder ?? index,
+        revision: ws.revision ?? 0,
+      } as Workspace;
+      upgradeLegacyMetrics(workspace);
+      return workspace;
+    });
   }
   async function saveAll(workspaces: Workspace[]): Promise<void> {
     await bb.storage.kv.set(WORKSPACES_KEY, workspaces);

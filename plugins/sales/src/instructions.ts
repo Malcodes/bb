@@ -28,7 +28,14 @@ Views are projections. Available primitives:
 - cards: config {titleField, subField, flagField?}
 - list: config {titleField, subField}
 - timeline: config {timeField, titleField, subField}
-- metrics: config {items:[{label,value,hint?}]}
+- metrics: config {metrics:[{id,label,operation:"count"|"sum"|"average",field?,where?:[{field,operator:"equals"|"notEquals"|"in"|"notIn"|"truthy",value?,values?}],format?,hint?}]}
+
+Metrics MUST be live declarative computations over a collection, never agent-calculated snapshot strings. Give a metrics view the relevant collectionId. Examples:
+- Offer: {operation:"count", where:[{field:"stage",operator:"equals",value:"Offer"}]}
+- Late Stage: {operation:"count", where:[{field:"stage",operator:"in",values:["Interviewing","Offer"]}]}
+- High Priority: {operation:"count", where:[{field:"priority",operator:"equals",value:"High"}]}
+- Active Pipeline: {operation:"count", where:[{field:"stage",operator:"notIn",values:["Closed won","Closed lost"]}]}
+These recompute automatically after every human or agent mutation.
 
 For high-quality Kanban, configure presentation rather than relying on generic defaults:
 {

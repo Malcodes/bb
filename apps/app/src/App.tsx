@@ -27,6 +27,7 @@ import {
   LEGACY_TOOLS_SKILL_DETAIL_ROUTE_PATH,
   PROJECT_ARCHIVED_ROUTE_PATH,
   PROJECTLESS_ARCHIVED_ROUTE_PATH,
+  PLUGIN_PANEL_ROUTE_PATH,
   PROJECT_SETTINGS_ROUTE_PATH,
   SETTINGS_PLUGIN_ROUTE_PATH,
   SETTINGS_PLUGINS_ROUTE_PATH,
@@ -75,6 +76,7 @@ const ProjectSettingsView = lazy(() =>
   })),
 );
 const SplitWorkspaceRoute = lazy(() => import("./views/SplitWorkspaceRoute"));
+const PluginPanelRoute = lazy(() => import("./views/PluginPanelRoute"));
 
 export function LegacyAutomationDetailRedirect() {
   const location = useLocation();
@@ -239,6 +241,10 @@ function AppRoutes() {
               element={<Navigate to={SKILLS_ROUTE_PATH} replace />}
             />
           </Route>
+          <Route
+            path={PLUGIN_PANEL_ROUTE_PATH}
+            element={<PluginPanelRoute />}
+          />
           <Route path="*" element={<SplitWorkspaceRoute />} />
         </Routes>
       </Suspense>
