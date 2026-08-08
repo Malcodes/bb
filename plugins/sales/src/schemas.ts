@@ -191,6 +191,7 @@ export const viewSchema = z.object({
     "metrics",
   ]),
   title: z.string().min(1),
+  visible: z.boolean().optional(),
   collectionId: z.string().optional(),
   config: viewConfigSchema,
 });
@@ -251,6 +252,21 @@ export const mutationSchema = z.discriminatedUnion("op", [
       op: z.literal("reorderViews"),
       workspaceId: z.string().min(1),
       viewIds: z.array(z.string()),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setViewVisibility"),
+      workspaceId: z.string().min(1),
+      viewId: z.string().min(1),
+      visible: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("removeView"),
+      workspaceId: z.string().min(1),
+      viewId: z.string().min(1),
     })
     .strict(),
   z

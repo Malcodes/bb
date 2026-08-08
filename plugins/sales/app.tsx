@@ -210,14 +210,16 @@ function WorkspaceSurface({
         }
       >
         <div className="flex min-w-0 flex-col gap-5">
-          {workspace.views.map((view) => (
-            <ViewRenderer
-              key={view.id}
-              view={view}
-              workspace={workspace}
-              mutate={mutate}
-            />
-          ))}
+          {workspace.views
+            .filter((view) => view.visible !== false)
+            .map((view) => (
+              <ViewRenderer
+                key={view.id}
+                view={view}
+                workspace={workspace}
+                mutate={mutate}
+              />
+            ))}
         </div>
       </div>
     </section>

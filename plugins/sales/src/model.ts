@@ -138,6 +138,8 @@ export type View = {
   id: string;
   primitive: "kanban" | "table" | "cards" | "list" | "timeline" | "metrics";
   title: string;
+  /** Presentation visibility only; hidden views keep collections and history. */
+  visible?: boolean;
   /** Collection this view projects; metrics views may omit it. */
   collectionId?: string;
   config: ViewConfig;
@@ -184,6 +186,13 @@ export type Mutation =
       rowId: string;
     }
   | { op: "reorderViews"; workspaceId: string; viewIds: string[] }
+  | {
+      op: "setViewVisibility";
+      workspaceId: string;
+      viewId: string;
+      visible: boolean;
+    }
+  | { op: "removeView"; workspaceId: string; viewId: string }
   | { op: "renameWorkspace"; workspaceId: string; title: string };
 
 /**
@@ -325,6 +334,21 @@ export function applyMutation(ws: Workspace, m: Mutation): boolean {
     ws.views.sort(
       (a, b) => (order.get(a.id) ?? 999) - (order.get(b.id) ?? 999),
     );
+    return true;
+  }
+  if (m.op === "setViewVisibility") {
+    if (m.workspaceId !== ws.id) return false;
+    const view = ws.views.find((candidate) => candidate.id === m.viewId);
+    if (!view) return false;
+    if ((view.visible !== false) === m.visible) return false;
+    view.visible = m.visible;
+    return true;
+  }
+  if (m.op === "removeView") {
+    if (m.workspaceId !== ws.id) return false;
+    const index = ws.views.findIndex((candidate) => candidate.id === m.viewId);
+    if (index === -1) return false;
+    ws.views.splice(index, 1);
     return true;
   }
   if (m.workspaceId !== ws.id) return false;

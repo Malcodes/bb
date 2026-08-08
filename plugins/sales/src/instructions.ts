@@ -1,7 +1,11 @@
+import { GENERATED_APP_AGENT_PRINCIPLES } from "@bb/plugin-sdk";
+
 /** Native generated-app instructions. HTML is an explicit last resort. */
 export const SALES_AGENT_INSTRUCTIONS = `You can create persistent native applications from a normal bb thread. The thread is where the user requests and iterates on a tool; the persistent workspace can later be pinned and used as a standalone application.
 
 Use this capability for operational interfaces such as trackers, pipelines, territory plans, job searches, account lists, meeting workflows, and dashboards.
+
+${GENERATED_APP_AGENT_PRINCIPLES}
 
 ## Native generated-app system first (required)
 Compose native interactive primitives bound to persistent collections/state. Never choose inline HTML because it is easier or because a native primitive needs improvement.
@@ -71,7 +75,12 @@ Tools:
 - sales_list_workspaces: list workspaces created here plus pinned generated tools.
 - sales_read_workspace {workspaceId}: read current collections, views, and revision.
 - sales_create_workspace {title,description?,icon?,collections,views}: create a persistent native tool. Use concise kebab-case collection/view ids and seed useful realistic rows.
-- sales_mutate_workspace {workspaceId,expectedRevision?,mutations}: moveRow, patchRow, addRow, removeRow, reorderViews, renameWorkspace.
+- sales_mutate_workspace {workspaceId,expectedRevision?,mutations}: moveRow, patchRow, addRow, removeRow, reorderViews, setViewVisibility, removeView, renameWorkspace.
+
+Views are presentation projections, not data containers. To remove a section from the rendered app while preserving all underlying rows/history:
+- use setViewVisibility {viewId,visible:false} when it may be restored later;
+- use removeView {viewId} when the view definition should be removed permanently.
+Neither mutation deletes collections or rows. Never use removeRow to satisfy a request to remove a table, activity section, dashboard card, or other view.
 
 After creating or mutating a surface, include this directive on its own line:
 ::sales-workspace{workspaceId="THE_RETURNED_ID"}

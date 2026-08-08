@@ -103,3 +103,93 @@ describe("shared generated workspace surface", () => {
     expect(appSurface.queryByText(/thread/i)).toBeNull();
   });
 });
+
+it("updates inline and pinned surfaces immediately when an agent hides or removes views", async () => {
+  let current = {
+    ...workspace,
+    revision: 3,
+    views: [
+      ...workspace.views,
+      {
+        id: "all-opportunities",
+        primitive: "table" as const,
+        title: "All Opportunities",
+        collectionId: "prospects",
+        config: { columns: ["company", "stage"] },
+      },
+      {
+        id: "activity",
+        primitive: "timeline" as const,
+        title: "Activity",
+        collectionId: "prospects",
+        config: {
+          timeField: "stage",
+          titleField: "company",
+          subField: "stage",
+        },
+      },
+    ],
+  };
+  const liveRpc = {
+    ...rpc,
+    getWorkspace: () => current,
+    mutate: () => current,
+    setPinned: () => current,
+  };
+  const inline = renderSlot(
+    app.messageDirectives[0]!,
+    {
+      attributes: { workspaceId: "ws_1" },
+      source: '::sales-workspace{workspaceId="ws_1"}',
+      message: {
+        id: "m2",
+        threadId: "thr_1",
+        turnId: "turn_2",
+        projectId: "p1",
+      },
+      openWorkspaceFile: null,
+    },
+    { rpc: liveRpc },
+  );
+  const application = renderSlot(
+    app.navPanels[0]!,
+    { subPath: "ws_1" },
+    { rpc: liveRpc },
+  );
+
+  await waitFor(() => {
+    expect(
+      within(inline.container).getByText("All Opportunities"),
+    ).toBeDefined();
+    expect(within(application.container).getByText("Activity")).toBeDefined();
+  });
+
+  current = {
+    ...current,
+    revision: 4,
+    views: current.views
+      .filter((view) => view.id !== "activity")
+      .map((view) =>
+        view.id === "all-opportunities" ? { ...view, visible: false } : view,
+      ),
+  };
+  await inline.emitRealtime("workspaces-changed", { workspaceId: "ws_1" });
+  await application.emitRealtime("workspaces-changed", {
+    workspaceId: "ws_1",
+  });
+
+  await waitFor(() => {
+    expect(
+      within(inline.container).queryByText("All Opportunities"),
+    ).toBeNull();
+    expect(within(inline.container).queryByText("Activity")).toBeNull();
+    expect(
+      within(application.container).queryByText("All Opportunities"),
+    ).toBeNull();
+    expect(within(application.container).queryByText("Activity")).toBeNull();
+    expect(within(inline.container).getByText("Token Company")).toBeDefined();
+    expect(
+      within(application.container).getByText("Token Company"),
+    ).toBeDefined();
+  });
+});

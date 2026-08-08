@@ -132,6 +132,55 @@ describe("applyMutation", () => {
     ).toBe(false);
   });
 
+  it("hides and removes views without deleting underlying collection data", () => {
+    const ws = sample();
+    ws.views.push(
+      {
+        id: "all-opportunities",
+        primitive: "table",
+        title: "All Opportunities",
+        collectionId: "prospects",
+        config: { columns: ["company", "stage"] },
+      },
+      {
+        id: "activity",
+        primitive: "timeline",
+        title: "Activity",
+        collectionId: "prospects",
+        config: { timeField: "lastTouch", titleField: "company" },
+      },
+    );
+    const rowsBefore = structuredClone(ws.collections[0]!.rows);
+
+    expect(
+      applyMutation(ws, {
+        op: "setViewVisibility",
+        workspaceId: "ws1",
+        viewId: "all-opportunities",
+        visible: false,
+      }),
+    ).toBe(true);
+    expect(
+      ws.views.find((view) => view.id === "all-opportunities")?.visible,
+    ).toBe(false);
+
+    expect(
+      applyMutation(ws, {
+        op: "removeView",
+        workspaceId: "ws1",
+        viewId: "activity",
+      }),
+    ).toBe(true);
+    expect(ws.views.some((view) => view.id === "activity")).toBe(false);
+    expect(ws.collections[0]!.rows).toEqual(rowsBefore);
+    expect(ws.collections[0]!.fields).toEqual([
+      "company",
+      "contact",
+      "stage",
+      "lastTouch",
+    ]);
+  });
+
   it("upgrades known legacy metric snapshots to live collection computations", () => {
     const ws = sample();
     ws.collections[0]!.fields.push("priority");
