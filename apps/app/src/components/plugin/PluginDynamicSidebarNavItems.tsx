@@ -7,6 +7,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useSidebarReorderDnd } from "@/components/sidebar/useSidebarReorderDnd";
 import type {
   PluginSidebarNavItem,
   PluginSidebarNavItemsState,
@@ -88,6 +89,10 @@ function DynamicSidebarSection({
     [itemIds, providerState],
   );
 
+  const { dndContextProps, onClickCapture } = useSidebarReorderDnd({
+    onDragEnd: handleDragEnd,
+  });
+
   return (
     <>
       <div className="hidden" aria-hidden>
@@ -104,12 +109,12 @@ function DynamicSidebarSection({
           <div className="px-2 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             {slot.title}
           </div>
-          <DndContext onDragEnd={handleDragEnd}>
+          <DndContext {...dndContextProps}>
             <SortableContext
               items={itemIds}
               strategy={verticalListSortingStrategy}
             >
-              <div className="space-y-0.5">
+              <div className="space-y-0.5" onClickCapture={onClickCapture}>
                 {providerState.items.map((item) => (
                   <DynamicSidebarRow
                     key={item.id}
@@ -177,8 +182,11 @@ function DynamicSidebarRow({
         {...sortable.attributes}
         {...sortable.listeners}
         onClick={() => {
-          onNavigate?.();
+          // Navigate before mobile-close state changes can tear down the row.
+          // The shared sidebar DnD sensors preserve ordinary clicks while
+          // requiring a deliberate drag activation distance.
           void navigate(path);
+          onNavigate?.();
         }}
         className="flex min-w-0 flex-1 items-center gap-2 px-2 text-left outline-none"
         title={item.title}

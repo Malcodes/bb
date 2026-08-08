@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 import { useEffect } from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resetPluginSlotStoreForTest,
@@ -28,7 +29,9 @@ vi.mock("./SplitWorkspaceRoute", () => ({
 
 vi.mock("./PluginPanelView", () => ({
   PluginPanelView: ({ pluginId, panelPath, subPath }: any) => (
-    <div data-testid="application-surface">{`${pluginId}/${panelPath}/${subPath}`}</div>
+    <main data-testid="standalone-generated-app" data-workspace-id={subPath}>
+      {`${pluginId}/${panelPath}/${subPath}`}
+    </main>
   ),
 }));
 
@@ -50,6 +53,11 @@ function GeneratedToolsProvider({
     });
   }, [setState]);
   return null;
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-pathname">{location.pathname}</output>;
 }
 
 describe("production plugin panel route", () => {
@@ -91,10 +99,11 @@ describe("production plugin panel route", () => {
     resetPluginSlotStoreForTest();
   });
 
-  it("unmounts the real thread route when a sidebar navigation enters an application panel", () => {
+  it("unmounts the real thread route when a sidebar navigation enters an application panel", async () => {
     render(
       <MemoryRouter initialEntries={["/threads/thr_1"]}>
         <PluginDynamicSidebarNavItems />
+        <LocationProbe />
         <Routes>
           <Route
             path="/plugins/:pluginId/:panelPath/*"
@@ -113,11 +122,20 @@ describe("production plugin panel route", () => {
     );
 
     expect(screen.getByTestId("thread-workspace")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Job Search" }));
-    expect(screen.queryByTestId("thread-workspace")).toBeNull();
-    expect(screen.getByTestId("application-surface").textContent).toBe(
-      "sales/tool/ws_1",
+    const row = screen.getByRole("button", { name: "Job Search" });
+    // Full pointer sequence: this regresses the bug where dnd-kit's default
+    // zero-distance sensor claimed pointer-down and swallowed row activation.
+    await userEvent.click(row);
+
+    expect(screen.getByTestId("location-pathname").textContent).toBe(
+      "/plugins/sales/tool/ws_1",
     );
+    expect(screen.queryByTestId("thread-workspace")).toBeNull();
+    expect(screen.queryByText(/thread timeline/i)).toBeNull();
+    expect(screen.queryByText(/message composer/i)).toBeNull();
+    const application = screen.getByTestId("standalone-generated-app");
+    expect(application.textContent).toBe("sales/tool/ws_1");
+    expect(application.getAttribute("data-workspace-id")).toBe("ws_1");
     expect(lifecycle).toEqual({ threadMounts: 1, threadUnmounts: 1 });
   });
 });
