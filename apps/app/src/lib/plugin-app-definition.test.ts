@@ -825,3 +825,38 @@ describe("interpretPluginFrontends", () => {
     );
   });
 });
+
+describe("collectPluginAppRegistrations — dynamic primary navigation", () => {
+  it("collects a route-only panel and host-rendered dynamic item provider", () => {
+    const definition = definePluginApp((app) => {
+      app.slots.navPanel({
+        id: "tool",
+        title: "Generated tool",
+        icon: "Kanban",
+        path: "tool",
+        sidebar: false,
+        component: Component,
+      });
+      app.slots.sidebarNavItems({
+        id: "generated-tools",
+        title: "Generated tools",
+        targetPanelId: "tool",
+        provider: Component,
+      });
+    });
+
+    const registrations = collectPluginAppRegistrations(definition);
+    expect(registrations.navPanels[0]).toMatchObject({
+      id: "tool",
+      sidebar: false,
+    });
+    expect(registrations.sidebarNavItems).toEqual([
+      {
+        id: "generated-tools",
+        title: "Generated tools",
+        targetPanelId: "tool",
+        provider: Component,
+      },
+    ]);
+  });
+});

@@ -11,6 +11,7 @@ import {
   type PluginPendingInteractionRegistration,
   type PluginSettingsSectionRegistration,
   type PluginSidebarFooterActionRegistration,
+  type PluginSidebarNavItemsRegistration,
   type PluginThreadListRegistration,
   type PluginThreadHeaderActionRegistration,
   type PluginThreadPanelActionRegistration,
@@ -73,6 +74,7 @@ export function collectPluginAppRegistrations(
   const homepageSections: PluginHomepageSectionRegistration[] = [];
   const settingsSections: PluginSettingsSectionRegistration[] = [];
   const navPanels: PluginNavPanelRegistration[] = [];
+  const sidebarNavItems: PluginSidebarNavItemsRegistration[] = [];
   const threadPanelActions: PluginThreadPanelActionRegistration[] = [];
   const composerCustomizations: ComposerCustomization[] = [];
   const pendingInteractions: PluginPendingInteractionRegistration[] = [];
@@ -87,6 +89,7 @@ export function collectPluginAppRegistrations(
     homepageSection: new Set<string>(),
     settingsSection: new Set<string>(),
     navPanel: new Set<string>(),
+    sidebarNavItems: new Set<string>(),
     threadPanelAction: new Set<string>(),
     composerCustomization: new Set<string>(),
     pendingInteraction: new Set<string>(),
@@ -152,9 +155,27 @@ export function collectPluginAppRegistrations(
           icon: requireNonEmptyString(kind, "icon", registration.icon),
           path,
           component: requireComponent(kind, registration.component),
+          ...(registration.sidebar !== undefined
+            ? { sidebar: registration.sidebar }
+            : {}),
           ...(registration.headerContent !== undefined
             ? { headerContent: registration.headerContent }
             : {}),
+        });
+      },
+      sidebarNavItems(registration) {
+        const kind = "slots.sidebarNavItems";
+        const id = requireSlotId(kind, registration?.id);
+        requireUniqueId(kind, seenIds.sidebarNavItems, id);
+        sidebarNavItems.push({
+          id,
+          title: requireNonEmptyString(kind, "title", registration.title),
+          targetPanelId: requireNonEmptyString(
+            kind,
+            "targetPanelId",
+            registration.targetPanelId,
+          ),
+          provider: requireComponent(kind, registration.provider),
         });
       },
       threadPanelAction(registration) {
@@ -320,6 +341,7 @@ export function collectPluginAppRegistrations(
     homepageSections,
     settingsSections,
     navPanels,
+    sidebarNavItems,
     threadPanelActions,
     composerCustomizations,
     pendingInteractions,

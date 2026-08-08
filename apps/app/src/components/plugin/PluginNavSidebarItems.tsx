@@ -124,13 +124,15 @@ export function PluginNavSidebarItems({
 }) {
   const { navPanels } = usePluginSlots();
   const rows = useMemo<SidebarNavRow[]>(() => {
-    const pluginRows = navPanels.map<SidebarNavRow>((panel) => ({
-      kind: "plugin",
-      pluginId: panel.pluginId,
-      id: panel.id,
-      title: panel.title,
-      panel,
-    }));
+    const pluginRows = navPanels
+      .filter((panel) => panel.sidebar !== false)
+      .map<SidebarNavRow>((panel) => ({
+        kind: "plugin",
+        pluginId: panel.pluginId,
+        id: panel.id,
+        title: panel.title,
+        panel,
+      }));
     if (toolsRoutePath === undefined) return pluginRows;
     return [
       {

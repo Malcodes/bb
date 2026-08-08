@@ -4,7 +4,10 @@ import { applyMutation, newId, type Workspace } from "./src/model.js";
 function sample(): Workspace {
   return {
     id: "ws1",
-    threadId: "thr1",
+    originThreadId: "thr1",
+    pinnedAt: null,
+    navOrder: 0,
+    revision: 0,
     title: "Sales Job Search",
     createdAt: "2026-08-07T00:00:00Z",
     updatedAt: "2026-08-07T00:00:00Z",

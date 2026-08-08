@@ -1,5 +1,3 @@
-// Thread-native persistent work surfaces. The normal bb thread is the
-// container; assistant message directives render native primitives inline.
 import { defineRpcContract, type BbPluginApi } from "@bb/plugin-sdk";
 import { z } from "zod";
 import {
@@ -17,6 +15,15 @@ import { SALES_AGENT_INSTRUCTIONS } from "./src/instructions.js";
 
 const WORKSPACES_KEY = "workspaces";
 const SIGNAL_CHANNEL = "workspaces-changed";
+const pinnedItemSchema = z
+  .object({
+    id: z.string(),
+    title: z.string(),
+    icon: z.string(),
+    subPath: z.string(),
+    navOrder: z.number(),
+  })
+  .strict();
 
 function toJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -24,77 +31,86 @@ function toJson<T>(value: T): T {
 
 export const salesRpcContract = defineRpcContract({
   getWorkspace: {
-    input: z
-      .object({ workspaceId: z.string().min(1), threadId: z.string().min(1) })
-      .strict(),
+    input: z.object({ workspaceId: z.string().min(1) }).strict(),
     output: workspaceSchema.strict(),
   },
   mutate: {
     input: z
       .object({
         workspaceId: z.string().min(1),
-        threadId: z.string().min(1),
+        expectedRevision: z.number().int().nonnegative().optional(),
         mutations: z.array(mutationSchema).min(1),
       })
       .strict(),
     output: workspaceSchema.strict(),
   },
+  setPinned: {
+    input: z
+      .object({ workspaceId: z.string().min(1), pinned: z.boolean() })
+      .strict(),
+    output: workspaceSchema.strict(),
+  },
+  listPinned: {
+    input: z.object({}).strict(),
+    output: z.object({ items: z.array(pinnedItemSchema) }).strict(),
+  },
+  reorderPinned: {
+    input: z.object({ workspaceIds: z.array(z.string()) }).strict(),
+    output: z.object({ ok: z.literal(true) }).strict(),
+  },
 });
 
 export default async function plugin(bb: BbPluginApi) {
   async function loadAll(): Promise<Workspace[]> {
-    const stored = (await bb.storage.kv.get<Workspace[]>(WORKSPACES_KEY)) ?? [];
-    // Pre-thread-container artifacts are intentionally not exposed in normal
-    // threads; retaining them here avoids destructive migration.
-    return stored;
+    const raw =
+      (await bb.storage.kv.get<Array<Partial<Workspace> & { id: string }>>(
+        WORKSPACES_KEY,
+      )) ?? [];
+    // Non-destructive migration from the thread-contained prototype.
+    return raw.map((ws, index) => ({
+      ...ws,
+      originThreadId:
+        ws.originThreadId ?? (ws as { threadId?: string }).threadId ?? "legacy",
+      pinnedAt: ws.pinnedAt ?? null,
+      navOrder: ws.navOrder ?? index,
+      revision: ws.revision ?? 0,
+    })) as Workspace[];
   }
-
   async function saveAll(workspaces: Workspace[]): Promise<void> {
     await bb.storage.kv.set(WORKSPACES_KEY, workspaces);
   }
-
-  async function getWorkspace(
-    workspaceId: string,
-    threadId: string,
-  ): Promise<Workspace> {
-    const ws = (await loadAll()).find(
-      (w) => w.id === workspaceId && w.threadId === threadId,
-    );
-    if (!ws)
-      throw new Error(`workspace not found in this thread: ${workspaceId}`);
+  async function getWorkspace(workspaceId: string): Promise<Workspace> {
+    const ws = (await loadAll()).find((item) => item.id === workspaceId);
+    if (!ws) throw new Error(`workspace not found: ${workspaceId}`);
     return ws;
   }
-
-  function changed(workspaceId: string, threadId: string): void {
-    bb.realtime.publish(SIGNAL_CHANNEL, {
-      workspaceId,
-      threadId,
-      at: Date.now(),
-    });
+  function changed(workspaceId?: string): void {
+    bb.realtime.publish(SIGNAL_CHANNEL, { workspaceId, at: Date.now() });
   }
-
-  // Single write path shared by native UI interactions and agent tools.
   async function applyMutations(
     workspaceId: string,
-    threadId: string,
     mutations: Mutation[],
+    expectedRevision?: number,
   ): Promise<Workspace> {
     const all = await loadAll();
-    const ws = all.find((w) => w.id === workspaceId && w.threadId === threadId);
-    if (!ws)
-      throw new Error(`workspace not found in this thread: ${workspaceId}`);
+    const ws = all.find((item) => item.id === workspaceId);
+    if (!ws) throw new Error(`workspace not found: ${workspaceId}`);
+    if (expectedRevision !== undefined && expectedRevision !== ws.revision) {
+      throw new Error(
+        `workspace changed; expected revision ${expectedRevision}, current ${ws.revision}`,
+      );
+    }
     for (const mutation of mutations) {
-      if (mutation.workspaceId !== workspaceId) {
-        throw new Error("mutation workspaceId does not match target workspace");
-      }
+      if (mutation.workspaceId !== workspaceId)
+        throw new Error("mutation workspaceId mismatch");
       applyMutation(ws, mutation);
     }
+    ws.revision += 1;
     ws.updatedAt = new Date().toISOString();
     await saveAll(all);
-    changed(workspaceId, threadId);
+    changed(workspaceId);
     return ws;
   }
-
   async function createWorkspace(
     threadId: string,
     input: z.infer<typeof createWorkspaceInputSchema>,
@@ -103,7 +119,10 @@ export default async function plugin(bb: BbPluginApi) {
     const now = new Date().toISOString();
     const ws: Workspace = {
       id: newId("ws"),
-      threadId,
+      originThreadId: threadId,
+      pinnedAt: null,
+      navOrder: all.filter((item) => item.pinnedAt).length,
+      revision: 0,
       title: input.title,
       icon: input.icon,
       createdAt: now,
@@ -116,45 +135,72 @@ export default async function plugin(bb: BbPluginApi) {
     };
     all.push(ws);
     await saveAll(all);
-    changed(ws.id, threadId);
+    changed(ws.id);
     return ws;
+  }
+  async function setPinned(
+    workspaceId: string,
+    pinned: boolean,
+  ): Promise<Workspace> {
+    const all = await loadAll();
+    const ws = all.find((item) => item.id === workspaceId);
+    if (!ws) throw new Error(`workspace not found: ${workspaceId}`);
+    ws.pinnedAt = pinned ? new Date().toISOString() : null;
+    if (pinned)
+      ws.navOrder = all.filter(
+        (item) => item.pinnedAt && item.id !== ws.id,
+      ).length;
+    ws.revision += 1;
+    ws.updatedAt = new Date().toISOString();
+    await saveAll(all);
+    changed(workspaceId);
+    return ws;
+  }
+  async function reorderPinned(workspaceIds: readonly string[]): Promise<void> {
+    const all = await loadAll();
+    const order = new Map(workspaceIds.map((id, index) => [id, index]));
+    for (const ws of all) {
+      const next = order.get(ws.id);
+      if (ws.pinnedAt && next !== undefined) ws.navOrder = next;
+    }
+    await saveAll(all);
+    changed();
   }
 
   bb.agents.registerTool({
     name: "sales_list_workspaces",
     description:
-      "List persistent native interactive work surfaces in this bb thread.",
+      "List persistent native work surfaces created from this thread plus pinned tools.",
     parameters: z.object({}).strict(),
     async execute(_input, context) {
-      const rows = (await loadAll())
-        .filter((ws) => ws.threadId === context.threadId)
-        .map((ws) => ({
-          id: ws.id,
-          title: ws.title,
-          updatedAt: ws.updatedAt,
-          viewCount: ws.views.length,
-          rowCount: ws.collections.reduce((n, c) => n + c.rows.length, 0),
-        }));
-      return JSON.stringify(rows);
-    },
-  });
-
-  bb.agents.registerTool({
-    name: "sales_read_workspace",
-    description:
-      "Read a native work surface's current collections and views. It must belong to this thread.",
-    parameters: z.object({ workspaceId: z.string().min(1) }).strict(),
-    async execute({ workspaceId }, context) {
       return JSON.stringify(
-        toJson(await getWorkspace(workspaceId, context.threadId)),
+        (await loadAll())
+          .filter(
+            (ws) =>
+              ws.originThreadId === context.threadId || ws.pinnedAt !== null,
+          )
+          .map((ws) => ({
+            id: ws.id,
+            title: ws.title,
+            pinned: ws.pinnedAt !== null,
+            revision: ws.revision,
+          })),
       );
     },
   });
-
+  bb.agents.registerTool({
+    name: "sales_read_workspace",
+    description:
+      "Read a native work surface's current collections, views, and revision.",
+    parameters: z.object({ workspaceId: z.string().min(1) }).strict(),
+    async execute({ workspaceId }) {
+      return JSON.stringify(toJson(await getWorkspace(workspaceId)));
+    },
+  });
   bb.agents.registerTool({
     name: "sales_create_workspace",
     description:
-      "Create a persistent native interactive surface in this thread, bound to collections and rendered with native primitives.",
+      "Create a persistent native interactive surface and return its id for ::sales-workspace.",
     parameters: createWorkspaceInputSchema.strict(),
     async execute(input, context) {
       return JSON.stringify(
@@ -162,32 +208,29 @@ export default async function plugin(bb: BbPluginApi) {
       );
     },
   });
-
   bb.agents.registerTool({
     name: "sales_mutate_workspace",
     description:
-      "Mutate a thread-native work surface through the same move/patch/add/remove path used by its interactive UI.",
+      "Mutate a work surface through the same path used by inline and full-width UI.",
     parameters: z
       .object({
         workspaceId: z.string().min(1),
+        expectedRevision: z.number().int().nonnegative().optional(),
         mutations: z.array(mutationSchema).min(1),
       })
       .strict(),
-    async execute({ workspaceId, mutations }, context) {
+    async execute({ workspaceId, expectedRevision, mutations }) {
       return JSON.stringify(
         toJson(
           await applyMutations(
             workspaceId,
-            context.threadId,
             mutations as Mutation[],
+            expectedRevision,
           ),
         ),
       );
     },
   });
-
-  // Normal bb threads receive the capability. The instructions make it
-  // conditional on relevant workflow requests rather than hijacking chat.
   bb.agents.configure(() => ({
     tools: [
       "sales_list_workspaces",
@@ -200,13 +243,37 @@ export default async function plugin(bb: BbPluginApi) {
   }));
 
   bb.rpc.register(salesRpcContract, {
-    async getWorkspace({ workspaceId, threadId }) {
-      return toJson(await getWorkspace(workspaceId, threadId));
+    async getWorkspace({ workspaceId }) {
+      return toJson(await getWorkspace(workspaceId));
     },
-    async mutate({ workspaceId, threadId, mutations }) {
+    async mutate({ workspaceId, expectedRevision, mutations }) {
       return toJson(
-        await applyMutations(workspaceId, threadId, mutations as Mutation[]),
+        await applyMutations(
+          workspaceId,
+          mutations as Mutation[],
+          expectedRevision,
+        ),
       );
+    },
+    async setPinned({ workspaceId, pinned }) {
+      return toJson(await setPinned(workspaceId, pinned));
+    },
+    async listPinned() {
+      const items = (await loadAll())
+        .filter((ws) => ws.pinnedAt !== null)
+        .sort((a, b) => a.navOrder - b.navOrder)
+        .map((ws) => ({
+          id: ws.id,
+          title: ws.title,
+          icon: ws.icon ?? "Kanban",
+          subPath: ws.id,
+          navOrder: ws.navOrder,
+        }));
+      return { items };
+    },
+    async reorderPinned({ workspaceIds }) {
+      await reorderPinned(workspaceIds);
+      return { ok: true as const };
     },
   });
 }

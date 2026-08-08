@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { MemoryRouter, Route, Routes, useNavigate } from "react-router-dom";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   act,
   cleanup,
@@ -42,6 +42,7 @@ import {
 } from "./plugin-composer-host";
 import { PluginHomepageSections } from "./PluginHomepageSections";
 import { PluginNavSidebarItems } from "./PluginNavSidebarItems";
+import { PluginDynamicSidebarNavItems } from "./PluginDynamicSidebarNavItems";
 import {
   getComposerInputLock,
   useComposer,
@@ -1273,6 +1274,67 @@ describe("PluginNavSidebarItems + PluginPanelView", () => {
       expect(screen.getByRole("button", { name: "Automations" })).toBeDefined();
     },
   );
+
+  it("renders dynamic provider items through host chrome and supports unpin", () => {
+    const remove = vi.fn();
+    function Provider({ setState }: { setState: (state: any) => void }) {
+      useEffect(() => {
+        setState({
+          items: [
+            {
+              id: "job-search",
+              title: "Job Search",
+              icon: "Kanban",
+              subPath: "ws_1",
+            },
+          ],
+          remove,
+          reorder: vi.fn(),
+        });
+      }, [setState]);
+      return null;
+    }
+    setPluginSlotRegistrations(
+      "sales",
+      registrationSet({
+        navPanels: [
+          {
+            id: "tool",
+            title: "Generated tool",
+            icon: "Kanban",
+            path: "tool",
+            sidebar: false,
+            component: Board,
+          },
+        ],
+        sidebarNavItems: [
+          {
+            id: "generated-tools",
+            title: "Generated tools",
+            targetPanelId: "tool",
+            provider: Provider,
+          },
+        ],
+      }),
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <PluginNavSidebarItems />
+        <PluginDynamicSidebarNavItems />
+        <Routes>
+          <Route path="/" element={<div>home</div>} />
+          <Route path={PLUGIN_PANEL_ROUTE_PATH} element={<PluginPanelView />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Generated tool" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Job Search" }));
+    expect(screen.getByText("board panel body")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Unpin Job Search" }));
+    expect(remove).toHaveBeenCalledWith("job-search");
+  });
 
   it("renders a sidebar entry that routes to the plugin panel", () => {
     setPluginSlotRegistrations(

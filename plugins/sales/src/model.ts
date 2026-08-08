@@ -50,8 +50,12 @@ export type View = {
 
 export type Workspace = {
   id: string;
-  /** Normal bb thread that owns and renders this interactive artifact. */
-  threadId: string;
+  /** Creation/configuration provenance; not an access or containment boundary. */
+  originThreadId: string;
+  pinnedAt: string | null;
+  navOrder: number;
+  /** Monotonic optimistic-concurrency revision. */
+  revision: number;
   title: string;
   icon?: string;
   createdAt: string;

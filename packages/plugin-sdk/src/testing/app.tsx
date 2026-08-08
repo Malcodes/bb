@@ -37,6 +37,7 @@ import {
   type PluginSettingsSectionRegistration,
   type PluginSettingsState,
   type PluginSidebarFooterActionRegistration,
+  type PluginSidebarNavItemsRegistration,
   type PluginSidebarPullRequest,
   type PluginSidebarThreadActions,
   type PluginSidebarThreadPullRequestState,
@@ -515,6 +516,7 @@ export interface CapturedPluginApp {
   homepageSections: PluginHomepageSectionRegistration[];
   settingsSections: PluginSettingsSectionRegistration[];
   navPanels: PluginNavPanelRegistration[];
+  sidebarNavItems: PluginSidebarNavItemsRegistration[];
   threadPanelActions: PluginThreadPanelActionRegistration[];
   composerCustomizations: ComposerCustomization[];
   pendingInteractions: PluginPendingInteractionRegistration[];
@@ -545,6 +547,7 @@ function collectRegistrations(
     homepageSections: [],
     settingsSections: [],
     navPanels: [],
+    sidebarNavItems: [],
     threadPanelActions: [],
     composerCustomizations: [],
     pendingInteractions: [],
@@ -560,6 +563,7 @@ function collectRegistrations(
     homepageSection: new Set<string>(),
     settingsSection: new Set<string>(),
     navPanel: new Set<string>(),
+    sidebarNavItems: new Set<string>(),
     threadPanelAction: new Set<string>(),
     composerCustomization: new Set<string>(),
     pendingInteraction: new Set<string>(),
@@ -625,9 +629,27 @@ function collectRegistrations(
           icon: requireNonEmptyString(kind, "icon", registration.icon),
           path,
           component: requireComponent(kind, registration.component),
+          ...(registration.sidebar !== undefined
+            ? { sidebar: registration.sidebar }
+            : {}),
           ...(registration.headerContent !== undefined
             ? { headerContent: registration.headerContent }
             : {}),
+        });
+      },
+      sidebarNavItems(registration) {
+        const kind = "slots.sidebarNavItems";
+        const id = requireSlotId(kind, registration?.id);
+        requireUniqueId(kind, seenIds.sidebarNavItems, id);
+        captured.sidebarNavItems.push({
+          id,
+          title: requireNonEmptyString(kind, "title", registration.title),
+          targetPanelId: requireNonEmptyString(
+            kind,
+            "targetPanelId",
+            registration.targetPanelId,
+          ),
+          provider: requireComponent(kind, registration.provider),
         });
       },
       threadPanelAction(registration) {

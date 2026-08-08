@@ -9,6 +9,7 @@ import type {
   PluginNavPanelRegistration,
   PluginSettingsSectionRegistration,
   PluginSidebarFooterActionRegistration,
+  PluginSidebarNavItemsRegistration,
   PluginThreadHeaderActionRegistration,
   PluginThreadListRegistration,
   PluginThreadPanelActionRegistration,
@@ -26,6 +27,7 @@ export interface PluginRegistrationSet {
   homepageSections: readonly PluginHomepageSectionRegistration[];
   settingsSections: readonly PluginSettingsSectionRegistration[];
   navPanels: readonly PluginNavPanelRegistration[];
+  sidebarNavItems?: readonly PluginSidebarNavItemsRegistration[];
   threadPanelActions: readonly PluginThreadPanelActionRegistration[];
   composerCustomizations?: readonly ComposerCustomization[];
   pendingInteractions?: readonly PluginPendingInteractionRegistration[];
@@ -59,6 +61,8 @@ export interface PluginSettingsSectionSlot
   extends PluginSettingsSectionRegistration, PluginSlotBase {}
 export interface PluginNavPanelSlot
   extends PluginNavPanelRegistration, PluginSlotBase {}
+export interface PluginSidebarNavItemsSlot
+  extends PluginSidebarNavItemsRegistration, PluginSlotBase {}
 export interface PluginThreadPanelActionSlot
   extends PluginThreadPanelActionRegistration, PluginSlotBase {}
 export interface PluginComposerCustomizationSlot
@@ -83,6 +87,7 @@ export interface PluginSlotSnapshot {
   homepageSections: readonly PluginHomepageSectionSlot[];
   settingsSections: readonly PluginSettingsSectionSlot[];
   navPanels: readonly PluginNavPanelSlot[];
+  sidebarNavItems: readonly PluginSidebarNavItemsSlot[];
   threadPanelActions: readonly PluginThreadPanelActionSlot[];
   composerCustomizations: readonly PluginComposerCustomizationSlot[];
   pendingInteractions: readonly PluginPendingInteractionSlot[];
@@ -98,6 +103,7 @@ export const EMPTY_PLUGIN_SLOT_SNAPSHOT: PluginSlotSnapshot = {
   homepageSections: [],
   settingsSections: [],
   navPanels: [],
+  sidebarNavItems: [],
   threadPanelActions: [],
   composerCustomizations: [],
   pendingInteractions: [],
@@ -120,6 +126,7 @@ function buildSnapshot(): PluginSlotSnapshot {
     homepageSections: PluginHomepageSectionSlot[];
     settingsSections: PluginSettingsSectionSlot[];
     navPanels: PluginNavPanelSlot[];
+    sidebarNavItems: PluginSidebarNavItemsSlot[];
     threadPanelActions: PluginThreadPanelActionSlot[];
     composerCustomizations: PluginComposerCustomizationSlot[];
     pendingInteractions: PluginPendingInteractionSlot[];
@@ -133,6 +140,7 @@ function buildSnapshot(): PluginSlotSnapshot {
     homepageSections: [],
     settingsSections: [],
     navPanels: [],
+    sidebarNavItems: [],
     threadPanelActions: [],
     composerCustomizations: [],
     pendingInteractions: [],
@@ -155,6 +163,9 @@ function buildSnapshot(): PluginSlotSnapshot {
     }
     for (const registration of set.navPanels) {
       next.navPanels.push({ ...registration, pluginId, generation });
+    }
+    for (const registration of set.sidebarNavItems ?? []) {
+      next.sidebarNavItems.push({ ...registration, pluginId, generation });
     }
     for (const registration of set.threadPanelActions) {
       next.threadPanelActions.push({ ...registration, pluginId, generation });

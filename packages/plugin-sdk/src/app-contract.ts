@@ -219,12 +219,46 @@ export interface PluginNavPanelRegistration {
   /** URL segment under `/plugins/<pluginId>/`; letters, digits, `-`, `_`. */
   path: string;
   component: ComponentType<PluginNavPanelProps>;
+  /** Whether this route also gets one static main-sidebar row. Default true. */
+  sidebar?: boolean;
   /**
    * Optional component rendered on the right side of the shared title bar
    * (e.g. a sync button or a count). Contained separately from the body: a
    * throwing headerContent is hidden without breaking the title bar.
    */
   headerContent?: ComponentType<PluginNavPanelProps>;
+}
+
+/** One dynamic primary-navigation row supplied by a plugin provider. */
+export interface PluginSidebarNavItem {
+  /** Stable within the provider; used for keys and reorder. */
+  id: string;
+  title: string;
+  /** Icon hint rendered by the host. */
+  icon: string;
+  /** Route remainder passed to the target nav panel as subPath. */
+  subPath: string;
+}
+
+/** State published by a dynamic sidebar provider; the host renders all UI. */
+export interface PluginSidebarNavItemsState {
+  items: readonly PluginSidebarNavItem[];
+  remove?(itemId: string): void | Promise<void>;
+  reorder?(orderedItemIds: readonly string[]): void | Promise<void>;
+}
+
+export interface PluginSidebarNavItemsProviderProps {
+  /** Publish current items and mutation callbacks; publish again on changes. */
+  setState(state: PluginSidebarNavItemsState): void;
+}
+
+/** A generic dynamic section in bb's main sidebar. */
+export interface PluginSidebarNavItemsRegistration {
+  id: string;
+  title: string;
+  /** A navPanel id registered by this plugin, commonly sidebar:false. */
+  targetPanelId: string;
+  provider: ComponentType<PluginSidebarNavItemsProviderProps>;
 }
 
 /** Context handed to a `threadPanelAction`'s `run`. */
@@ -685,6 +719,7 @@ export interface PluginAppSlots {
   homepageSection(registration: PluginHomepageSectionRegistration): void;
   settingsSection(registration: PluginSettingsSectionRegistration): void;
   navPanel(registration: PluginNavPanelRegistration): void;
+  sidebarNavItems(registration: PluginSidebarNavItemsRegistration): void;
   threadPanelAction(registration: PluginThreadPanelActionRegistration): void;
   pendingInteraction(registration: PluginPendingInteractionRegistration): void;
   sidebarFooterAction(

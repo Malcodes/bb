@@ -59,7 +59,10 @@ export const viewSchema = z.object({
 
 export const workspaceSchema = z.object({
   id: z.string().min(1),
-  threadId: z.string().min(1),
+  originThreadId: z.string().min(1),
+  pinnedAt: z.string().nullable(),
+  navOrder: z.number().int(),
+  revision: z.number().int().nonnegative(),
   title: z.string().min(1),
   icon: z.string().optional(),
   createdAt: z.string(),

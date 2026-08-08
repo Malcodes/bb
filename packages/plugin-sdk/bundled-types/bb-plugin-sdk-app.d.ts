@@ -417,12 +417,42 @@ interface PluginNavPanelRegistration {
     /** URL segment under `/plugins/<pluginId>/`; letters, digits, `-`, `_`. */
     path: string;
     component: ComponentType<PluginNavPanelProps>;
+    /** Whether this route also gets one static main-sidebar row. Default true. */
+    sidebar?: boolean;
     /**
      * Optional component rendered on the right side of the shared title bar
      * (e.g. a sync button or a count). Contained separately from the body: a
      * throwing headerContent is hidden without breaking the title bar.
      */
     headerContent?: ComponentType<PluginNavPanelProps>;
+}
+/** One dynamic primary-navigation row supplied by a plugin provider. */
+interface PluginSidebarNavItem {
+    /** Stable within the provider; used for keys and reorder. */
+    id: string;
+    title: string;
+    /** Icon hint rendered by the host. */
+    icon: string;
+    /** Route remainder passed to the target nav panel as subPath. */
+    subPath: string;
+}
+/** State published by a dynamic sidebar provider; the host renders all UI. */
+interface PluginSidebarNavItemsState {
+    items: readonly PluginSidebarNavItem[];
+    remove?(itemId: string): void | Promise<void>;
+    reorder?(orderedItemIds: readonly string[]): void | Promise<void>;
+}
+interface PluginSidebarNavItemsProviderProps {
+    /** Publish current items and mutation callbacks; publish again on changes. */
+    setState(state: PluginSidebarNavItemsState): void;
+}
+/** A generic dynamic section in bb's main sidebar. */
+interface PluginSidebarNavItemsRegistration {
+    id: string;
+    title: string;
+    /** A navPanel id registered by this plugin, commonly sidebar:false. */
+    targetPanelId: string;
+    provider: ComponentType<PluginSidebarNavItemsProviderProps>;
 }
 /** Context handed to a `threadPanelAction`'s `run`. */
 interface PluginThreadPanelActionContext {
@@ -838,6 +868,7 @@ interface PluginAppSlots {
     homepageSection(registration: PluginHomepageSectionRegistration): void;
     settingsSection(registration: PluginSettingsSectionRegistration): void;
     navPanel(registration: PluginNavPanelRegistration): void;
+    sidebarNavItems(registration: PluginSidebarNavItemsRegistration): void;
     threadPanelAction(registration: PluginThreadPanelActionRegistration): void;
     pendingInteraction(registration: PluginPendingInteractionRegistration): void;
     sidebarFooterAction(registration: PluginSidebarFooterActionRegistration): void;
@@ -1440,4 +1471,4 @@ declare const experimental_useSidebarThreadPullRequest: (threadId: string) => Pl
 declare const experimental_useSidebarThreadSplit: (threadId: string) => PluginSidebarThreadSplit;
 
 export { Markdown, ThreadChat, definePluginApp, experimental_NewThreadComposer, experimental_useSidebarThreadActions, experimental_useSidebarThreadPullRequest, experimental_useSidebarThreadSplit, experimental_useSidebarThreads, useBbContext, useBbNavigate, useComposer, useComposerView, useRealtime, useRealtimeConnectionState, useRpc, useSettings };
-export type { BbContext, BbNavigate, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, JsonValue, MarkdownProps, NewThreadComposerProps, NewThreadRequest, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtimeConnectionState, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };
+export type { BbContext, BbNavigate, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, JsonValue, MarkdownProps, NewThreadComposerProps, NewThreadRequest, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtimeConnectionState, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };

@@ -3,11 +3,21 @@ import { loadPluginApp } from "@bb/plugin-sdk/testing/app";
 
 const app = await loadPluginApp(() => import("./app"));
 
-describe("thread-native Sales UI registration", () => {
-  it("registers one inline workspace directive and no standalone navigation", () => {
+describe("generated Sales tool registrations", () => {
+  it("keeps inline rendering and exposes a route-only panel plus dynamic sidebar provider", () => {
     expect(app.messageDirectives.map((slot) => slot.id)).toEqual([
       "sales-workspace",
     ]);
-    expect(app.navPanels).toEqual([]);
+    expect(app.navPanels).toHaveLength(1);
+    expect(app.navPanels[0]).toMatchObject({
+      id: "generated-tool",
+      path: "tool",
+      sidebar: false,
+    });
+    expect(app.sidebarNavItems).toHaveLength(1);
+    expect(app.sidebarNavItems[0]).toMatchObject({
+      id: "generated-tools",
+      targetPanelId: "generated-tool",
+    });
   });
 });

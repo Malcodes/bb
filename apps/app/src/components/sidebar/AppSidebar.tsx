@@ -26,6 +26,7 @@ import { ProjectList, ProjectListActionButtons } from "./ProjectList";
 import { PluginThreadList } from "./PluginThreadList";
 import { useThreadListProvider } from "./threadListProvider";
 import { PluginNavSidebarItems } from "@/components/plugin/PluginNavSidebarItems";
+import { PluginDynamicSidebarNavItems } from "@/components/plugin/PluginDynamicSidebarNavItems";
 import { PluginSidebarFooterActions } from "@/components/plugin/PluginSidebarFooterActions";
 import { SidebarUpdatesBadge } from "./SidebarUpdatesBadge";
 import { SidebarHistoryNavigationControls } from "./SidebarHistoryNavigationControls";
@@ -426,6 +427,7 @@ export function AppSidebar({
           splitEnabled={threadSplitsEnabled}
           toolsRoutePath={toolsRoutePath}
         />
+        <PluginDynamicSidebarNavItems onNavigate={closeOnMobile} />
         <SidebarContent>
           {threadListProvider ? (
             <PluginThreadList
