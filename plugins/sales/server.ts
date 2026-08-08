@@ -61,6 +61,18 @@ export const salesRpcContract = defineRpcContract({
 });
 
 export default async function plugin(bb: BbPluginApi) {
+  // Serialize all read-modify-write transactions. Revisions then reliably
+  // reject stale UI writes instead of allowing simultaneous human/agent turns
+  // to overwrite each other between KV reads.
+  let writeTail: Promise<void> = Promise.resolve();
+  function exclusive<T>(task: () => Promise<T>): Promise<T> {
+    const result = writeTail.then(task, task);
+    writeTail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
   async function loadAll(): Promise<Workspace[]> {
     const raw =
       (await bb.storage.kv.get<Array<Partial<Workspace> & { id: string }>>(
@@ -248,15 +260,17 @@ export default async function plugin(bb: BbPluginApi) {
     },
     async mutate({ workspaceId, expectedRevision, mutations }) {
       return toJson(
-        await applyMutations(
-          workspaceId,
-          mutations as Mutation[],
-          expectedRevision,
+        await exclusive(() =>
+          applyMutations(
+            workspaceId,
+            mutations as Mutation[],
+            expectedRevision,
+          ),
         ),
       );
     },
     async setPinned({ workspaceId, pinned }) {
-      return toJson(await setPinned(workspaceId, pinned));
+      return toJson(await exclusive(() => setPinned(workspaceId, pinned)));
     },
     async listPinned() {
       const items = (await loadAll())
@@ -272,7 +286,7 @@ export default async function plugin(bb: BbPluginApi) {
       return { items };
     },
     async reorderPinned({ workspaceIds }) {
-      await reorderPinned(workspaceIds);
+      await exclusive(() => reorderPinned(workspaceIds));
       return { ok: true as const };
     },
   });
