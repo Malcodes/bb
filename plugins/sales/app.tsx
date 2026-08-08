@@ -205,11 +205,11 @@ function WorkspaceSurface({
       <div
         className={
           fullWidth
-            ? "min-h-0 flex-1 overflow-auto bg-muted/[0.12] p-5 lg:p-6"
+            ? "min-h-0 flex-1 overflow-auto bg-muted/[0.12] p-3.5 lg:p-4"
             : "overflow-x-auto p-3"
         }
       >
-        <div className="flex min-w-0 flex-col gap-5">
+        <div className="flex min-w-0 flex-col gap-3">
           {workspace.views
             .filter((view) => view.visible !== false)
             .map((view) => (

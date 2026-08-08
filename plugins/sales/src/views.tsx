@@ -243,7 +243,7 @@ function KanbanCard({
           : undefined,
       }}
       onClick={onOpen}
-      className={`group relative rounded-lg border-border/80 bg-card p-3 shadow-[0_1px_2px_hsl(var(--foreground)/0.035)] transition-[border-color,box-shadow,opacity] duration-150 hover:border-border hover:shadow-[0_3px_10px_hsl(var(--foreground)/0.07)] focus-within:ring-2 focus-within:ring-ring/30 ${drag.isDragging ? "opacity-25" : ""}`}
+      className={`group relative rounded-md border-border/80 bg-card px-2.5 py-2 shadow-[0_1px_2px_hsl(var(--foreground)/0.035)] transition-[border-color,box-shadow,opacity] duration-150 hover:border-border hover:shadow-[0_3px_10px_hsl(var(--foreground)/0.07)] focus-within:ring-2 focus-within:ring-ring/30 ${drag.isDragging ? "opacity-25" : ""}`}
     >
       <button
         type="button"
@@ -251,7 +251,7 @@ function KanbanCard({
         {...drag.listeners}
         {...drag.attributes}
         onClick={(event) => event.stopPropagation()}
-        className="absolute right-2 top-2 flex size-6 cursor-grab items-center justify-center rounded opacity-0 text-muted-foreground transition-opacity hover:bg-muted group-hover:opacity-100 focus:opacity-100 active:cursor-grabbing"
+        className="absolute right-1.5 top-1.5 flex size-6 cursor-grab items-center justify-center rounded opacity-0 text-muted-foreground transition-opacity hover:bg-muted group-hover:opacity-100 focus:opacity-100 active:cursor-grabbing"
       >
         <Icon name="DragDropVertical" className="size-3.5" />
       </button>
@@ -291,9 +291,9 @@ function KanbanLane({
   return (
     <section
       ref={drop.setNodeRef}
-      className={`flex w-[292px] min-w-[292px] flex-col rounded-lg border border-transparent bg-muted/35 transition-[background-color,border-color] duration-150 ${drop.isOver ? "border-primary/25 bg-primary/[0.045]" : ""}`}
+      className={`flex min-h-36 max-h-[min(54vh,500px)] w-[252px] min-w-[252px] flex-col self-start rounded-lg border border-transparent bg-muted/35 transition-[background-color,border-color] duration-150 ${drop.isOver ? "border-primary/25 bg-primary/[0.045]" : ""}`}
     >
-      <header className="sticky top-0 z-10 flex h-11 items-center gap-2 rounded-t-lg bg-muted/90 px-3 supports-[backdrop-filter]:backdrop-blur-sm">
+      <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center gap-1.5 rounded-t-lg bg-muted/90 px-2.5 supports-[backdrop-filter]:backdrop-blur-sm">
         <span className={`size-1.5 rounded-full ${toneClass}`} />
         {icon ? (
           <Icon name={icon} className="size-3.5 text-muted-foreground" />
@@ -315,7 +315,7 @@ function KanbanLane({
           <Icon name="Plus" className="size-3.5" />
         </Button>
       </header>
-      <div className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex min-h-24 flex-col gap-1.5 overflow-y-auto p-1.5">
         {rows.map((row) => (
           <KanbanCard
             key={row.id}
@@ -329,7 +329,7 @@ function KanbanLane({
           <button
             type="button"
             onClick={onRequestAdd}
-            className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border/70 text-[11px] text-muted-foreground transition-colors hover:border-border hover:bg-background/50"
+            className="flex min-h-16 items-center justify-center rounded-md border border-dashed border-border/70 text-[11px] text-muted-foreground transition-colors hover:border-border hover:bg-background/50"
           >
             Add first card
           </button>
@@ -552,7 +552,7 @@ function KanbanView({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="flex min-h-[420px] gap-3 overflow-x-auto bg-muted/10 p-3">
+        <div className="flex items-start gap-2.5 overflow-x-auto bg-muted/10 p-2.5">
           {lanes.map((lane) => (
             <KanbanLane
               key={lane}
@@ -574,7 +574,7 @@ function KanbanView({
           }}
         >
           {active ? (
-            <Card className="w-[276px] rotate-[0.3deg] rounded-lg border-primary/20 bg-card p-3 shadow-xl">
+            <Card className="w-[242px] rotate-[0.3deg] rounded-md border-primary/20 bg-card px-2.5 py-2 shadow-xl">
               <KanbanCardContent
                 row={active}
                 collection={collection}
@@ -1141,11 +1141,11 @@ function MetricsView({
   return (
     <div className="grid grid-cols-2 divide-x divide-border/70 rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)] sm:grid-cols-4">
       {items.map((metric) => (
-        <div key={metric.id} className="min-w-0 px-4 py-3.5">
+        <div key={metric.id} className="min-w-0 px-3.5 py-2.5">
           <div className="truncate text-[11px] font-medium text-muted-foreground">
             {metric.label}
           </div>
-          <div className="mt-1 text-xl font-semibold tracking-[-0.025em] tabular-nums">
+          <div className="mt-0.5 text-lg font-semibold tracking-[-0.025em] tabular-nums">
             {metric.value}
           </div>
           {metric.hint ? (

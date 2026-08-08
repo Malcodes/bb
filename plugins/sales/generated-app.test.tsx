@@ -139,6 +139,11 @@ describe("native generated-app vocabulary", () => {
     expect(
       screen.getByRole("button", { name: "Add card to Contacted" }),
     ).toBeDefined();
+    const lane = screen.getByText("Contacted").closest("section");
+    expect(lane?.className).toContain("min-h-36");
+    expect(lane?.className).toContain("self-start");
+    expect(lane?.className).toContain("max-h-[min(54vh,500px)]");
+    expect(lane?.className).not.toContain("flex-1");
   });
 });
 
