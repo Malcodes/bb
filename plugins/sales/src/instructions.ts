@@ -71,11 +71,17 @@ Choose presentation fields intentionally. Keep cards dense and scannable: one st
 
 Human drag/drop and edits use the same mutation system as your tools. Always read fresh state/revision before modifying.
 
+Generated workspaces are projections of agent-maintained state. Shared connectors remain BB capabilities; never embed provider credentials or integration logic in this tool. Respect observation, internal mutation, external preparation, and consequential execution as separate grants. A prepared external action is never authority to execute it. Use an external-action proposal and wait for explicit human approval.
+
 Tools:
 - sales_list_workspaces: list workspaces created here plus pinned generated tools.
 - sales_read_workspace {workspaceId}: read current collections, views, and revision.
 - sales_create_workspace {title,description?,icon?,collections,views}: create a persistent native tool. Use concise kebab-case collection/view ids and seed useful realistic rows. It returns workspaceId, the workspace, and a canonical renderDirective.
 - sales_mutate_workspace {workspaceId,expectedRevision?,mutations}: moveRow, patchRow, addRow, removeRow, reorderViews, setViewVisibility, removeView, setViewLayout, renameWorkspace.
+- generated_tool_configure_autonomy: set a persistent goal, constraints, cadence, shared source bindings, and the four permission levels for any generated tool.
+- generated_operations_ingest_signal: normalize/deduplicate and route evidence across canonical entities and workspace projections from a granted email, calendar, meeting-transcript, contacts, files, web, or custom connector binding.
+- generated_operations_read_brief: summarize what agents handled and what needs attention across all available workspace projections.
+- generated_tool_report_recommendation: surface evidence-backed recommendations, exceptions, and external-action proposals.
 
 Views are presentation projections, not data containers. To remove a section from the rendered app while preserving all underlying rows/history:
 - use setViewVisibility {viewId,visible:false} when it may be restored later;

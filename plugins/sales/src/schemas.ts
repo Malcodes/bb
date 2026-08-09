@@ -200,6 +200,77 @@ export const viewSchema = z.object({
   config: viewConfigSchema,
 });
 
+const sourceKindSchema = z.enum([
+  "email",
+  "calendar",
+  "meeting-transcript",
+  "contacts",
+  "files",
+  "web",
+  "custom",
+]);
+const sourceBindingSchema = z.object({
+  id: z.string(),
+  kind: sourceKindSchema,
+  label: z.string(),
+  enabled: z.boolean(),
+  resource: z.string().optional(),
+  scopes: z.array(z.string()),
+});
+const permissionModelSchema = z.object({
+  observe: z.object({ sourceIds: z.array(z.string()) }),
+  internalState: z.enum(["automatic", "recommend-only"]),
+  prepareExternalActions: z.enum(["automatic", "recommend-only", "disabled"]),
+  executeConsequentialActions: z.enum(["require-approval", "disabled"]),
+});
+const autonomyPolicySchema = z.object({
+  enabled: z.boolean(),
+  goal: z.string(),
+  constraints: z.array(z.string()),
+  cadenceMinutes: z.number().int().min(5).max(1440),
+  permissions: permissionModelSchema,
+});
+const autonomySignalSchema = z.object({
+  id: z.string(),
+  targetWorkspaceIds: z.array(z.string()),
+  entityRefs: z.array(z.string()),
+  sourceBindingId: z.string(),
+  sourceKind: sourceKindSchema,
+  fingerprint: z.string(),
+  observedAt: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  evidence: z.array(z.string()),
+  reconciledAt: z.string().optional(),
+});
+const autonomyRunSchema = z.object({
+  id: z.string(),
+  status: z.enum(["running", "completed", "failed"]),
+  startedAt: z.string(),
+  completedAt: z.string().optional(),
+  workerThreadId: z.string().optional(),
+  summary: z.string().optional(),
+  error: z.string().optional(),
+});
+const autonomyRecommendationSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["recommendation", "exception", "external-action"]),
+  title: z.string(),
+  rationale: z.string(),
+  evidence: z.array(z.string()),
+  proposedAction: z.string().optional(),
+  status: z.enum(["open", "approved", "rejected", "resolved"]),
+  createdAt: z.string(),
+  resolvedAt: z.string().optional(),
+});
+const autonomyStateSchema = z.object({
+  policy: autonomyPolicySchema,
+  sources: z.array(sourceBindingSchema),
+  signals: z.array(autonomySignalSchema),
+  runs: z.array(autonomyRunSchema),
+  recommendations: z.array(autonomyRecommendationSchema),
+});
+
 export const workspaceSchema = z.object({
   id: z.string().min(1),
   originThreadId: z.string().min(1),
@@ -213,6 +284,7 @@ export const workspaceSchema = z.object({
   updatedAt: z.string(),
   collections: z.array(collectionSchema),
   views: z.array(viewSchema),
+  autonomy: autonomyStateSchema.optional(),
 });
 
 export const workspaceSummarySchema = z.object({

@@ -12,6 +12,10 @@ describe("generated-app agent principles", () => {
     expect(GENERATED_APP_AGENT_PRINCIPLES).toContain(
       "underlying structured data available to agents even when hidden",
     );
-    expect(GENERATED_APP_AGENT_PRINCIPLES).not.toMatch(/sales|job search/i);
+    expect(GENERATED_APP_AGENT_PRINCIPLES).toContain(
+      "human capability amplification",
+    );
+    expect(GENERATED_APP_AGENT_PRINCIPLES).toContain("domain-independent");
+    expect(GENERATED_APP_AGENT_PRINCIPLES).not.toMatch(/job search/i);
   });
 });

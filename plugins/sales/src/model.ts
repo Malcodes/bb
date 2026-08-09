@@ -4,6 +4,8 @@
  * UI and the agent mutate state exclusively through Mutations.
  */
 
+import type { GeneratedToolAutonomyState } from "@bb/plugin-sdk";
+
 export type RowValue = string | number | boolean | null;
 export type Row = { id: string; [key: string]: RowValue };
 
@@ -167,6 +169,8 @@ export type Workspace = {
   updatedAt: string;
   collections: Collection[];
   views: View[];
+  /** Generic generated-tool operator policy and run/decision state. */
+  autonomy?: GeneratedToolAutonomyState;
 };
 
 export type Mutation =

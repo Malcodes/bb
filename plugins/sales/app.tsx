@@ -119,7 +119,30 @@ function useWorkspace(workspaceId: string) {
     [rpc, workspace, workspaceId],
   );
 
-  return { workspace, error, mutate, setPinned };
+  const resolveRecommendation = useCallback(
+    (
+      recommendationId: string,
+      decision: "approved" | "rejected" | "resolved",
+    ) => {
+      if (!workspace) return;
+      rpc
+        .call("resolveRecommendation", {
+          workspaceId,
+          recommendationId,
+          decision,
+        })
+        .then((next) => {
+          setWorkspace(next);
+          setError(null);
+        })
+        .catch((reason: unknown) => {
+          setError(reason instanceof Error ? reason.message : String(reason));
+        });
+    },
+    [rpc, workspace, workspaceId],
+  );
+
+  return { workspace, error, mutate, setPinned, resolveRecommendation };
 }
 
 const MODULE_MIN_HEIGHT = 280;
@@ -249,6 +272,116 @@ function WorkspaceModule({
   );
 }
 
+function AutonomyPanel({
+  workspace,
+  onResolve,
+}: {
+  workspace: Workspace;
+  onResolve(id: string, decision: "approved" | "rejected" | "resolved"): void;
+}) {
+  const state = workspace.autonomy;
+  if (!state?.policy.enabled && !state?.recommendations.length) return null;
+  const open = (state?.recommendations ?? []).filter(
+    (item) => item.status === "open",
+  );
+  const lastRun = state?.runs[0];
+  return (
+    <aside
+      className="rounded-lg border border-border/75 bg-background"
+      aria-label="Agent operator"
+    >
+      <header className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
+        <span className="relative flex size-5 items-center justify-center rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">
+          <Icon name="AiContentGenerator01" className="size-3.5" />
+          {lastRun?.status === "running" ? (
+            <span className="absolute -right-0.5 -top-0.5 size-1.5 animate-pulse rounded-full bg-blue-500" />
+          ) : null}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-semibold">Agent operator</div>
+          <div className="truncate text-[10px] text-muted-foreground">
+            {state?.policy.goal || "Monitoring workspace state"}
+          </div>
+        </div>
+        <span className="text-[10px] text-muted-foreground">
+          {lastRun?.status === "running"
+            ? "Working now"
+            : lastRun?.completedAt
+              ? `Last run ${new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(Math.round((Date.parse(lastRun.completedAt) - Date.now()) / 60_000), "minute")}`
+              : `Every ${state?.policy.cadenceMinutes ?? 30}m`}
+        </span>
+      </header>
+      {open.length ? (
+        <div className="divide-y divide-border/60">
+          {open.slice(0, 5).map((item) => (
+            <section
+              key={item.id}
+              className="flex items-start gap-2.5 px-3 py-2.5"
+            >
+              <Icon
+                name={safeIcon(
+                  item.kind === "exception"
+                    ? "AlertTriangle"
+                    : item.kind === "external-action"
+                      ? "ShieldCheck"
+                      : "Lightbulb",
+                  "AlertCircle",
+                )}
+                className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium">{item.title}</div>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+                  {item.rationale}
+                </p>
+                {item.evidence.length ? (
+                  <p className="mt-1 truncate text-[10px] text-muted-foreground/80">
+                    Evidence: {item.evidence.join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 gap-1">
+                {item.kind === "external-action" ? (
+                  <>
+                    <Button
+                      size="sm"
+                      className="h-7 px-2 text-[10px]"
+                      onClick={() => onResolve(item.id, "approved")}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[10px]"
+                      onClick={() => onResolve(item.id, "rejected")}
+                    >
+                      Reject
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => onResolve(item.id, "resolved")}
+                  >
+                    Resolve
+                  </Button>
+                )}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <p className="px-3 py-2 text-[11px] text-muted-foreground">
+          No open exceptions or decisions.
+        </p>
+      )}
+    </aside>
+  );
+}
+
 function WorkspaceSurface({
   workspaceId,
   fullWidth = false,
@@ -256,7 +389,8 @@ function WorkspaceSurface({
   workspaceId: string;
   fullWidth?: boolean;
 }) {
-  const { workspace, error, mutate, setPinned } = useWorkspace(workspaceId);
+  const { workspace, error, mutate, setPinned, resolveRecommendation } =
+    useWorkspace(workspaceId);
   const moduleSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
@@ -395,6 +529,10 @@ function WorkspaceSurface({
       >
         <div className="flex min-w-0 flex-col gap-2.5">
           <AttentionSummary workspace={workspace} />
+          <AutonomyPanel
+            workspace={workspace}
+            onResolve={resolveRecommendation}
+          />
           <DndContext
             sensors={moduleSensors}
             collisionDetection={closestCenter}

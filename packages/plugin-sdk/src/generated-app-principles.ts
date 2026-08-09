@@ -19,4 +19,8 @@ When designing or modifying any BB-generated app:
 - Avoid traditional CRM ergonomics where maintaining the system becomes work in itself.
 - Before adding any feature, ask internally: "Can an agent own this task instead?" If yes, design it agent-first.
 
+The product-level measure of success is human capability amplification, not automation volume: increase the number and ambition of objectives one person can pursue, the situational awareness they can retain, the quality and speed of their decisions, and the operational surface area they can govern. Automation is useful only insofar as it creates that leverage.
+
+Sales/GTM is one proving domain, not the platform boundary. These principles are domain-independent.
+
 A generated app is therefore an agent-operated system with a human oversight and decision surface—not a passive database that transfers clerical work to the user.`;

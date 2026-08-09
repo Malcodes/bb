@@ -3517,8 +3517,8 @@ declare const hostDaemonCommandRegistry: {
         }, z$1.core.$strict>], "kind">>;
         disallowedTools: z$1.ZodOptional<z$1.ZodArray<z$1.ZodString>>;
         instructionMode: z$1.ZodEnum<{
-            append: "append";
             replace: "replace";
+            append: "append";
         }>;
         type: z$1.ZodLiteral<"thread.start">;
         requestId: z$1.ZodString;
@@ -4006,8 +4006,8 @@ declare const hostDaemonCommandRegistry: {
                 }>;
             }, z$1.core.$strip>;
             instructionMode: z$1.ZodEnum<{
-                append: "append";
                 replace: "replace";
+                append: "append";
             }>;
             projectId: z$1.ZodString;
             providerId: z$1.ZodString;
@@ -4302,8 +4302,8 @@ declare const hostDaemonCommandRegistry: {
                 }>;
             }, z$1.core.$strip>;
             instructionMode: z$1.ZodEnum<{
-                append: "append";
                 replace: "replace";
+                append: "append";
             }>;
             projectId: z$1.ZodString;
             providerId: z$1.ZodString;
@@ -5307,9 +5307,9 @@ declare const hostDaemonCommandRegistry: {
         executablePath: z$1.ZodNullable<z$1.ZodString>;
         installed: z$1.ZodBoolean;
         installSource: z$1.ZodEnum<{
-            external: "external";
             notInstalled: "notInstalled";
             npmGlobal: "npmGlobal";
+            external: "external";
         }>;
         currentVersion: z$1.ZodNullable<z$1.ZodString>;
         latestVersion: z$1.ZodNullable<z$1.ZodString>;
@@ -5482,13 +5482,13 @@ declare const hostDaemonCommandRegistry: {
         outcome: z$1.ZodLiteral<"unavailable">;
         failure: z$1.ZodObject<{
             code: z$1.ZodEnum<{
+                unknown: "unknown";
                 path_not_found: "path_not_found";
                 not_git_repo: "not_git_repo";
                 not_worktree: "not_worktree";
                 workspace_type_mismatch: "workspace_type_mismatch";
                 permission_denied: "permission_denied";
                 unknown_environment: "unknown_environment";
-                unknown: "unknown";
             }>;
             workspacePath: z$1.ZodString;
             message: z$1.ZodString;
@@ -5532,13 +5532,13 @@ declare const hostDaemonCommandRegistry: {
         outcome: z$1.ZodLiteral<"unavailable">;
         failure: z$1.ZodObject<{
             code: z$1.ZodEnum<{
+                unknown: "unknown";
                 path_not_found: "path_not_found";
                 not_git_repo: "not_git_repo";
                 not_worktree: "not_worktree";
                 workspace_type_mismatch: "workspace_type_mismatch";
                 permission_denied: "permission_denied";
                 unknown_environment: "unknown_environment";
-                unknown: "unknown";
             }>;
             workspacePath: z$1.ZodString;
             message: z$1.ZodString;
@@ -5594,13 +5594,13 @@ declare const hostDaemonCommandRegistry: {
         outcome: z$1.ZodLiteral<"unavailable">;
         failure: z$1.ZodObject<{
             code: z$1.ZodEnum<{
+                unknown: "unknown";
                 path_not_found: "path_not_found";
                 not_git_repo: "not_git_repo";
                 not_worktree: "not_worktree";
                 workspace_type_mismatch: "workspace_type_mismatch";
                 permission_denied: "permission_denied";
                 unknown_environment: "unknown_environment";
-                unknown: "unknown";
             }>;
             workspacePath: z$1.ZodString;
             message: z$1.ZodString;
@@ -5642,13 +5642,13 @@ declare const hostDaemonCommandRegistry: {
         outcome: z$1.ZodLiteral<"unavailable">;
         failure: z$1.ZodObject<{
             code: z$1.ZodEnum<{
+                unknown: "unknown";
                 path_not_found: "path_not_found";
                 not_git_repo: "not_git_repo";
                 not_worktree: "not_worktree";
                 workspace_type_mismatch: "workspace_type_mismatch";
                 permission_denied: "permission_denied";
                 unknown_environment: "unknown_environment";
-                unknown: "unknown";
             }>;
             workspacePath: z$1.ZodString;
             message: z$1.ZodString;
@@ -5766,9 +5766,9 @@ declare const providerCliStatusResponseSchema: z$1.ZodRecord<z$1.ZodEnum<{
     executablePath: z$1.ZodNullable<z$1.ZodString>;
     installed: z$1.ZodBoolean;
     installSource: z$1.ZodEnum<{
-        external: "external";
         notInstalled: "notInstalled";
         npmGlobal: "npmGlobal";
+        external: "external";
     }>;
     currentVersion: z$1.ZodNullable<z$1.ZodString>;
     latestVersion: z$1.ZodNullable<z$1.ZodString>;
@@ -12912,7 +12912,123 @@ interface BbPluginApi {
  * contribute one shared philosophy instead of maintaining product-specific
  * copies.
  */
-declare const GENERATED_APP_AGENT_PRINCIPLES = "## Generated-app operating principle: the human is the orchestrator, not the operator\n\nBuild generated interfaces and workflows so agents perform as much ongoing operational work as reasonably possible. The human should primarily set goals, approve important decisions, correct direction, and inspect outcomes\u2014not manually maintain fields, move records, fill forms, update statuses, or babysit pipelines.\n\nWhen designing or modifying any BB-generated app:\n- Prefer agent-maintained state over human data entry.\n- Prefer proactive monitoring, enrichment, research, classification, prioritization, follow-up preparation, and recommendations over passive record storage.\n- Treat Kanban boards, dashboards, metrics, queues, tables, and lists as human oversight surfaces, not the primary mechanism for maintaining truth.\n- If data can reasonably be inferred, researched, synchronized, or updated by an agent, do that instead of asking the human to enter it.\n- Surface exceptions, decisions, approvals, uncertainty, and high-value actions to the human.\n- Keep supporting evidence, provenance, history, and underlying structured data available to agents even when hidden from the human UI.\n- Optimize the rendered app around: \"What does the human need to see or decide next?\"\n- Avoid traditional CRM ergonomics where maintaining the system becomes work in itself.\n- Before adding any feature, ask internally: \"Can an agent own this task instead?\" If yes, design it agent-first.\n\nA generated app is therefore an agent-operated system with a human oversight and decision surface\u2014not a passive database that transfers clerical work to the user.";
+declare const GENERATED_APP_AGENT_PRINCIPLES = "## Generated-app operating principle: the human is the orchestrator, not the operator\n\nBuild generated interfaces and workflows so agents perform as much ongoing operational work as reasonably possible. The human should primarily set goals, approve important decisions, correct direction, and inspect outcomes\u2014not manually maintain fields, move records, fill forms, update statuses, or babysit pipelines.\n\nWhen designing or modifying any BB-generated app:\n- Prefer agent-maintained state over human data entry.\n- Prefer proactive monitoring, enrichment, research, classification, prioritization, follow-up preparation, and recommendations over passive record storage.\n- Treat Kanban boards, dashboards, metrics, queues, tables, and lists as human oversight surfaces, not the primary mechanism for maintaining truth.\n- If data can reasonably be inferred, researched, synchronized, or updated by an agent, do that instead of asking the human to enter it.\n- Surface exceptions, decisions, approvals, uncertainty, and high-value actions to the human.\n- Keep supporting evidence, provenance, history, and underlying structured data available to agents even when hidden from the human UI.\n- Optimize the rendered app around: \"What does the human need to see or decide next?\"\n- Avoid traditional CRM ergonomics where maintaining the system becomes work in itself.\n- Before adding any feature, ask internally: \"Can an agent own this task instead?\" If yes, design it agent-first.\n\nThe product-level measure of success is human capability amplification, not automation volume: increase the number and ambition of objectives one person can pursue, the situational awareness they can retain, the quality and speed of their decisions, and the operational surface area they can govern. Automation is useful only insofar as it creates that leverage.\n\nSales/GTM is one proving domain, not the platform boundary. These principles are domain-independent.\n\nA generated app is therefore an agent-operated system with a human oversight and decision surface\u2014not a passive database that transfers clerical work to the user.";
 
-export { GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, defineRpcContract };
-export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, JsonValue, MarkdownProps, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };
+/** Generic persistent autonomy contract for BB-generated tools. */
+type GeneratedToolSourceKind = "email" | "calendar" | "meeting-transcript" | "contacts" | "files" | "web" | "custom";
+/** A binding to a BB/shared connector. No generated tool embeds credentials. */
+type GeneratedToolSourceBinding = {
+    id: string;
+    kind: GeneratedToolSourceKind;
+    label: string;
+    enabled: boolean;
+    /** Connector-owned account/resource reference, never a credential. */
+    resource?: string;
+    scopes: string[];
+};
+type GeneratedToolPermissionModel = {
+    /** Read/consume events and information from these bound source ids. */
+    observe: {
+        sourceIds: string[];
+    };
+    /** Reconcile evidence into agent-maintained state. */
+    internalState: "automatic" | "recommend-only";
+    /** Draft messages/forms/transactions without committing them externally. */
+    prepareExternalActions: "automatic" | "recommend-only" | "disabled";
+    /** The hard boundary: execution is either disabled or individually approved. */
+    executeConsequentialActions: "require-approval" | "disabled";
+};
+type GeneratedToolAutonomyPolicy = {
+    enabled: boolean;
+    goal: string;
+    constraints: string[];
+    cadenceMinutes: number;
+    permissions: GeneratedToolPermissionModel;
+};
+type GeneratedToolSignal = {
+    id: string;
+    /** One normalized signal may reconcile into several workspace projections. */
+    targetWorkspaceIds: string[];
+    /** Canonical entity/workstream references used for cross-workspace routing. */
+    entityRefs: string[];
+    sourceBindingId: string;
+    sourceKind: GeneratedToolSourceKind;
+    fingerprint: string;
+    observedAt: string;
+    title: string;
+    summary: string;
+    evidence: string[];
+    reconciledAt?: string;
+};
+type GeneratedToolAutonomyRun = {
+    id: string;
+    status: "running" | "completed" | "failed";
+    startedAt: string;
+    completedAt?: string;
+    workerThreadId?: string;
+    summary?: string;
+    error?: string;
+};
+type GeneratedToolRecommendation = {
+    id: string;
+    kind: "recommendation" | "exception" | "external-action";
+    title: string;
+    rationale: string;
+    evidence: string[];
+    proposedAction?: string;
+    status: "open" | "approved" | "rejected" | "resolved";
+    createdAt: string;
+    resolvedAt?: string;
+};
+type GeneratedToolAutonomyState = {
+    policy: GeneratedToolAutonomyPolicy;
+    sources: GeneratedToolSourceBinding[];
+    signals: GeneratedToolSignal[];
+    runs: GeneratedToolAutonomyRun[];
+    recommendations: GeneratedToolRecommendation[];
+};
+declare const DEFAULT_GENERATED_TOOL_PERMISSION_MODEL: GeneratedToolPermissionModel;
+declare const DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY: GeneratedToolAutonomyPolicy;
+declare function buildGeneratedToolAutonomyPrompt(args: {
+    workspaceId: string;
+    title: string;
+    policy: GeneratedToolAutonomyPolicy;
+    sources?: GeneratedToolSourceBinding[];
+}): string;
+type GeneratedOperationsBrief = {
+    generatedAt: string;
+    changedWorkspaceIds: string[];
+    handled: Array<{
+        workspaceId: string;
+        summary: string;
+    }>;
+    attention: Array<{
+        workspaceId: string;
+        recommendationId: string;
+        kind: GeneratedToolRecommendation["kind"];
+        title: string;
+        rationale: string;
+        status: GeneratedToolRecommendation["status"];
+    }>;
+};
+/** Domain-neutral cross-workspace rollup for the human orchestrator. */
+declare function buildGeneratedOperationsBrief(projections: Array<{
+    workspaceId: string;
+    autonomy?: GeneratedToolAutonomyState;
+}>): GeneratedOperationsBrief;
+type GeneratedToolCapabilityRequest = {
+    capability: "observe";
+    sourceId: string;
+} | {
+    capability: "modify-internal-state";
+} | {
+    capability: "prepare-external-action";
+} | {
+    capability: "execute-consequential-action";
+    proposalStatus: GeneratedToolRecommendation["status"];
+};
+/** Central policy decision used by connector/action adapters before side effects. */
+declare function generatedToolCapabilityAllowed(permissions: GeneratedToolPermissionModel, request: GeneratedToolCapabilityRequest): boolean;
+
+export { DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY, DEFAULT_GENERATED_TOOL_PERMISSION_MODEL, GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, buildGeneratedOperationsBrief, buildGeneratedToolAutonomyPrompt, defineRpcContract, generatedToolCapabilityAllowed };
+export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedOperationsBrief, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, JsonValue, MarkdownProps, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };
