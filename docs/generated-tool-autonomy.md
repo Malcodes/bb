@@ -70,3 +70,18 @@ Their full databases and clerical interfaces do not need to be projected to the 
 10. Evaluate goal impact and schedule the next follow-up.
 
 Approved actions bypass normal research cadence so they are picked up promptly. Claims transition `approved → executing`; duplicate claims are rejected. Outcome recording requires `executing` state and settles the action as `succeeded` or `failed` with an evaluation record.
+
+## Gmail and Google Calendar adapters
+
+The first concrete source/action adapters use Gmail history IDs and Calendar sync tokens for incremental ingestion. Expired cursors recover through bounded full synchronization. Provider credentials remain secret connector settings and never enter workspace state, signals, prompts, or action payloads.
+
+Normalized Gmail evidence includes complete thread history, participants, labels/importance, canonical person/company references, commitments, response-needed detection, and unanswered commitment detection. Calendar evidence includes organizers/attendees, response state, upcoming timing, location/context, extracted commitments, meeting-prep needs, and scheduling decisions.
+
+Routine detection is not automatically a human notification. It wakes the hidden operator so it can reconcile entity/workstream memory, draft replies using full history, prepare concise meeting briefs, and decide whether anything truly needs attention. The human projection receives only unresolved exceptions, real scheduling decisions, send/update approvals, material changed context, and outcomes.
+
+Concrete action types are:
+
+- `gmail.send-reply`
+- `google-calendar.update-event`
+
+Both require a bounded payload, an enabled `google-work` action-channel binding, an idempotent proposal, explicit approval, and an atomic claim before the API transport is callable. Success/failure and provider evidence are recorded as outcomes.

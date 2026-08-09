@@ -3,8 +3,13 @@ import {
   buildGeneratedOperationsBrief,
   buildGeneratedToolAutonomyPrompt,
   defineRpcContract,
+  executeGoogleWorkAction,
   generatedToolCapabilityAllowed,
+  pollGoogleWork,
   type BbPluginApi,
+  type GeneratedEntityFact,
+  type GoogleWorkCursor,
+  type GoogleWorkTransport,
   type GeneratedToolAutonomyState,
   type GeneratedToolSignal,
 } from "@bb/plugin-sdk";
@@ -25,10 +30,12 @@ import {
 } from "./src/schemas.js";
 import { SALES_AGENT_INSTRUCTIONS } from "./src/instructions.js";
 import { workspaceDirective } from "./src/workspace-directive.js";
+import { GoogleApiWorkTransport } from "./src/google-api-transport.js";
 
 const WORKSPACES_KEY = "workspaces";
 const OPERATIONS_SIGNALS_KEY = "generated-operations-signals";
 const SIGNAL_CHANNEL = "workspaces-changed";
+const GOOGLE_CURSOR_KEY = "google-work-cursor";
 const pinnedItemSchema = z
   .object({
     id: z.string(),
@@ -154,7 +161,64 @@ export const salesRpcContract = defineRpcContract({
   },
 });
 
-export default async function plugin(bb: BbPluginApi) {
+export interface SalesPluginOptions {
+  googleTransport?: GoogleWorkTransport;
+  googleUserEmail?: string;
+  googleCalendarIds?: string[];
+  now?: () => Date;
+}
+
+export default async function plugin(
+  bb: BbPluginApi,
+  options: SalesPluginOptions = {},
+) {
+  const googleSettings = bb.settings.define({
+    googleAccessToken: {
+      type: "string",
+      label: "Google OAuth access token",
+      description:
+        "Secret token supplied by BB's Google connector; never stored in workspace state.",
+      secret: true,
+    },
+    googleUserEmail: {
+      type: "string",
+      label: "Google account email",
+      description:
+        "Used to distinguish incoming messages from outstanding commitments.",
+    },
+    googleCalendarIds: {
+      type: "string",
+      label: "Google Calendar ids",
+      description: "Comma-separated calendars to monitor.",
+      default: "primary",
+    },
+  });
+  async function googleRuntime(): Promise<{
+    transport: GoogleWorkTransport;
+    userEmail: string;
+    calendarIds: string[];
+  } | null> {
+    if (options.googleTransport && options.googleUserEmail) {
+      return {
+        transport: options.googleTransport,
+        userEmail: options.googleUserEmail,
+        calendarIds: options.googleCalendarIds ?? ["primary"],
+      };
+    }
+    const settings = await googleSettings.get();
+    if (!settings.googleAccessToken || !settings.googleUserEmail) return null;
+    return {
+      transport: new GoogleApiWorkTransport(
+        settings.googleAccessToken,
+        settings.googleUserEmail,
+      ),
+      userEmail: settings.googleUserEmail,
+      calendarIds: settings.googleCalendarIds
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    };
+  }
   // Serialize all read-modify-write transactions. Revisions then reliably
   // reject stale UI writes instead of allowing simultaneous human/agent turns
   // to overwrite each other between KV reads.
@@ -381,6 +445,142 @@ export default async function plugin(bb: BbPluginApi) {
     });
   }
 
+  async function pollGoogleCapabilityAdapters(): Promise<void> {
+    const runtime = await googleRuntime();
+    if (!runtime) return;
+    const { transport } = runtime;
+    const cursor = (await bb.storage.kv.get<GoogleWorkCursor>(
+      GOOGLE_CURSOR_KEY,
+    )) ?? {
+      calendarSyncTokens: {},
+    };
+    const polled = await pollGoogleWork({
+      transport,
+      cursor,
+      gmailBindingId: "google:gmail",
+      calendarBindingId: "google:calendar",
+      calendarIds: runtime.calendarIds,
+      userEmail: runtime.userEmail,
+      now: options.now?.(),
+    });
+    const workspaces = await loadAll();
+    const globalSignals = await loadOperationSignals();
+    for (const evidence of polled.evidence) {
+      for (const snapshot of workspaces) {
+        const state = autonomy(snapshot);
+        if (!state.policy.enabled) continue;
+        const wantedKind = evidence.source === "gmail" ? "email" : "calendar";
+        const source = state.sources.find(
+          (binding) => binding.enabled && binding.kind === wantedKind,
+        );
+        if (
+          !source ||
+          !generatedToolCapabilityAllowed(state.policy.permissions, {
+            capability: "observe",
+            sourceId: source.id,
+          })
+        )
+          continue;
+        await updateWorkspace(snapshot.id, (workspace) => {
+          const current = autonomy(workspace);
+          const fingerprint = evidence.fingerprint;
+          if (
+            !current.signals.some(
+              (signal) =>
+                signal.sourceBindingId === source.id &&
+                signal.fingerprint === fingerprint,
+            )
+          ) {
+            const signal: GeneratedToolSignal = {
+              id: newId("sig"),
+              targetWorkspaceIds: [workspace.id],
+              entityRefs: evidence.entityRefs,
+              sourceBindingId: source.id,
+              sourceKind: wantedKind,
+              fingerprint,
+              observedAt: evidence.observedAt,
+              title: evidence.title,
+              summary: evidence.summary,
+              evidence: evidence.evidence,
+              context: JSON.stringify(evidence.context),
+              attention: evidence.attention,
+            };
+            current.signals.unshift(signal);
+            current.signals = current.signals.slice(0, 500);
+            globalSignals.unshift(signal);
+          }
+          for (const ref of evidence.entityRefs) {
+            const entity = current.entities.find(
+              (candidate) => candidate.ref === ref,
+            );
+            const fact: GeneratedEntityFact = {
+              key: `latest-${evidence.source}`,
+              value: evidence.summary.slice(0, 1_000),
+              confidence: 0.85,
+              evidence: evidence.evidence,
+              observedAt: evidence.observedAt,
+            };
+            if (!entity) {
+              current.entities.unshift({
+                ref,
+                kind: ref.startsWith("person:") ? "person" : "company",
+                label: ref.split(":").slice(1).join(":"),
+                aliases: [],
+                facts: [fact],
+                updatedAt: evidence.observedAt,
+              });
+            } else {
+              const existing = entity.facts.find(
+                (candidate) => candidate.key === fact.key,
+              );
+              if (!existing || fact.observedAt >= existing.observedAt)
+                existing
+                  ? Object.assign(existing, fact)
+                  : entity.facts.push(fact);
+              entity.updatedAt = evidence.observedAt;
+            }
+          }
+          if (
+            ["follow-up-overdue", "scheduling-decision"].includes(
+              evidence.attention,
+            ) &&
+            !current.recommendations.some((item) =>
+              item.evidence.includes(evidence.fingerprint),
+            )
+          ) {
+            const exception = evidence.attention === "follow-up-overdue";
+            current.recommendations.unshift({
+              id: newId("rec"),
+              kind: exception ? "exception" : "recommendation",
+              title:
+                evidence.attention === "response-needed"
+                  ? `Response needed: ${evidence.title}`
+                  : evidence.attention === "meeting-prep"
+                    ? `Meeting brief: ${evidence.title}`
+                    : evidence.attention === "scheduling-decision"
+                      ? `Scheduling decision: ${evidence.title}`
+                      : `Outstanding commitment: ${evidence.title}`,
+              rationale:
+                evidence.context.suggestedAction ??
+                "New context requires agent analysis or human attention.",
+              evidence: [evidence.fingerprint, ...evidence.evidence],
+              status: "open",
+              createdAt: new Date().toISOString(),
+            });
+          }
+        });
+      }
+    }
+    await saveOperationSignals(globalSignals);
+    await bb.storage.kv.set(GOOGLE_CURSOR_KEY, polled.cursor);
+  }
+
+  bb.background.schedule(
+    "google-work-capability-poll",
+    "*/5 * * * *",
+    pollGoogleCapabilityAdapters,
+  );
+
   async function runAutonomySweep(): Promise<void> {
     const snapshots = await loadAll();
     const now = Date.now();
@@ -392,8 +592,12 @@ export default async function plugin(bb: BbPluginApi) {
       const hasApprovedAction = state.externalActions.some(
         (action) => action.status === "approved",
       );
+      const hasUnreconciledSignal = state.signals.some(
+        (signal) => signal.reconciledAt === undefined,
+      );
       if (
         !hasApprovedAction &&
+        !hasUnreconciledSignal &&
         now - lastAt < state.policy.cadenceMinutes * 60_000
       )
         continue;
@@ -459,8 +663,13 @@ export default async function plugin(bb: BbPluginApi) {
         if (!run) continue;
         run.status = status;
         run.completedAt = new Date().toISOString();
-        if (status === "completed") run.summary = detail ?? "Cycle completed.";
-        else run.error = detail ?? "Operator cycle failed.";
+        if (status === "completed") {
+          run.summary = detail ?? "Cycle completed.";
+          const reconciledAt = new Date().toISOString();
+          for (const signal of workspace.autonomy?.signals ?? []) {
+            signal.reconciledAt ??= reconciledAt;
+          }
+        } else run.error = detail ?? "Operator cycle failed.";
         workspace.revision += 1;
         workspace.updatedAt = new Date().toISOString();
         changedWorkspace = workspace.id;
@@ -948,6 +1157,9 @@ export default async function plugin(bb: BbPluginApi) {
         channelBindingId: z.string().min(1),
         target: z.string().min(1).max(500),
         payloadSummary: z.string().min(1).max(2000),
+        payload: z
+          .record(z.string(), z.string())
+          .refine((value) => JSON.stringify(value).length <= 20_000),
         rationale: z.string().min(1).max(2000),
         evidence: z.array(z.string()).min(1).max(30),
       })
@@ -993,6 +1205,7 @@ export default async function plugin(bb: BbPluginApi) {
             channelBindingId: input.channelBindingId,
             target: input.target,
             payloadSummary: input.payloadSummary,
+            payload: input.payload,
             rationale: input.rationale,
             evidence: input.evidence,
             status: "proposed" as const,
@@ -1110,6 +1323,97 @@ export default async function plugin(bb: BbPluginApi) {
   });
 
   bb.agents.registerTool({
+    name: "google_work_execute_claimed_action",
+    description:
+      "Execute one already-claimed Gmail reply or Google Calendar update through its bound Google action channel, then persist the authoritative outcome.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        actionId: z.string().min(1),
+        goalId: z.string().optional(),
+      })
+      .strict(),
+    async execute({ workspaceId, actionId, goalId }) {
+      const workspace = await getWorkspace(workspaceId);
+      const state = autonomy(workspace);
+      const action = state.externalActions.find((item) => item.id === actionId);
+      if (!action) throw new Error(`external action not found: ${actionId}`);
+      if (action.status !== "executing") {
+        throw new Error(
+          `Google action must be approved and claimed before execution; found ${action.status}`,
+        );
+      }
+      const binding = state.capabilities.find(
+        (candidate) =>
+          candidate.id === action.channelBindingId &&
+          candidate.role === "action-channel" &&
+          candidate.enabled &&
+          candidate.kind === "google-work",
+      );
+      if (!binding) {
+        throw new Error(
+          `enabled google-work action channel not found: ${action.channelBindingId}`,
+        );
+      }
+      const runtime = await googleRuntime();
+      if (!runtime) throw new Error("Google connector is not configured");
+      const { transport } = runtime;
+      try {
+        const result = await executeGoogleWorkAction({
+          transport,
+          actionType: action.actionType,
+          idempotencyKey: action.idempotencyKey,
+          payload: action.payload,
+        });
+        const updated = await updateWorkspace(
+          workspaceId,
+          (currentWorkspace) => {
+            const current = autonomy(currentWorkspace);
+            const live = current.externalActions.find(
+              (item) => item.id === actionId,
+            );
+            if (!live || live.status !== "executing") {
+              throw new Error(
+                "external action changed while Google execution was in flight",
+              );
+            }
+            live.status = "succeeded";
+            live.completedAt = new Date().toISOString();
+            live.outcome = result.outcome;
+            current.outcomes.unshift({
+              id: newId("outcome"),
+              goalId,
+              actionId,
+              observedAt: live.completedAt,
+              result: "positive",
+              assessment: result.outcome,
+              evidence: result.evidence,
+              followUp:
+                action.actionType === "gmail.send-reply"
+                  ? "Observe the thread for a response."
+                  : "Observe attendee responses and calendar changes.",
+            });
+          },
+        );
+        return JSON.stringify(toJson(updated));
+      } catch (error) {
+        await updateWorkspace(workspaceId, (currentWorkspace) => {
+          const live = autonomy(currentWorkspace).externalActions.find(
+            (item) => item.id === actionId,
+          );
+          if (live?.status === "executing") {
+            live.status = "failed";
+            live.completedAt = new Date().toISOString();
+            live.lastError =
+              error instanceof Error ? error.message : String(error);
+          }
+        });
+        throw error;
+      }
+    },
+  });
+
+  bb.agents.registerTool({
     name: "generated_tool_evolve_presentation",
     description:
       "Safely evolve a generated tool's human-facing definition: add/update/hide/remove/reorder/resize modules and replace projections, without changing operational collections or BB runtime code.",
@@ -1216,6 +1520,7 @@ export default async function plugin(bb: BbPluginApi) {
       "generated_operations_propose_external_action",
       "generated_operations_claim_approved_action",
       "generated_operations_record_action_outcome",
+      "google_work_execute_claimed_action",
       "generated_tool_report_recommendation",
       "generated_tool_evolve_presentation",
       "generated_operations_ingest_signal",

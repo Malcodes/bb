@@ -2029,8 +2029,8 @@ type ThreadEventRow = {
 declare const threadStatusSchema: z$1.ZodEnum<{
     error: "error";
     active: "active";
-    starting: "starting";
     idle: "idle";
+    starting: "starting";
     stopping: "stopping";
 }>;
 type ThreadStatus = z$1.infer<typeof threadStatusSchema>;
@@ -2843,8 +2843,8 @@ declare const environmentDiffFileResponseSchema: z$1.ZodObject<{
     path: z$1.ZodString;
     content: z$1.ZodString;
     contentEncoding: z$1.ZodEnum<{
-        base64: "base64";
         utf8: "utf8";
+        base64: "base64";
     }>;
     mimeType: z$1.ZodOptional<z$1.ZodString>;
     sizeBytes: z$1.ZodNumber;
@@ -13017,6 +13017,9 @@ type GeneratedToolSignal = {
     title: string;
     summary: string;
     evidence: string[];
+    /** Provider-normalized context retained for agent analysis, not rendered by default. */
+    context?: string;
+    attention?: string;
     reconciledAt?: string;
 };
 type GeneratedToolAutonomyRun = {
@@ -13157,6 +13160,8 @@ type GeneratedExternalAction = {
     channelBindingId: string;
     target: string;
     payloadSummary: string;
+    /** Adapter payload is string-only, bounded, and never contains credentials. */
+    payload: Record<string, string>;
     rationale: string;
     evidence: string[];
     status: "proposed" | "approved" | "rejected" | "executing" | "succeeded" | "failed";
@@ -13179,5 +13184,128 @@ type GeneratedOutcomeEvaluation = {
     followUp?: string;
 };
 
-export { DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY, DEFAULT_GENERATED_TOOL_PERMISSION_MODEL, GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, buildGeneratedOperationsBrief, buildGeneratedToolAutonomyPrompt, defineRpcContract, generatedToolCapabilityAllowed, validateGeneratedAppComposition };
-export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedEntityFact, GeneratedEntityMemory, GeneratedExternalAction, GeneratedGoalState, GeneratedOperationsBrief, GeneratedOpportunity, GeneratedOutcomeEvaluation, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityBinding, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, JsonValue, MarkdownProps, NativeCompositionNode, NativeViewLeaf, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };
+/** Concrete Gmail + Google Calendar capability adapters for generated operations. */
+type GooglePerson = {
+    email: string;
+    name?: string;
+};
+type GmailMessage = {
+    id: string;
+    threadId: string;
+    historyId: string;
+    internalDate: string;
+    from: GooglePerson;
+    to: GooglePerson[];
+    cc: GooglePerson[];
+    subject: string;
+    text: string;
+    labels: string[];
+};
+type GoogleCalendarEvent = {
+    id: string;
+    calendarId: string;
+    updated: string;
+    status: "confirmed" | "tentative" | "cancelled";
+    summary: string;
+    description?: string;
+    location?: string;
+    start: string;
+    end: string;
+    organizer?: GooglePerson;
+    attendees: Array<GooglePerson & {
+        responseStatus?: string;
+    }>;
+};
+type GoogleWorkCursor = {
+    gmailHistoryId?: string;
+    calendarSyncTokens: Record<string, string>;
+    lastSuccessfulPollAt?: string;
+};
+type GoogleWorkEvidence = {
+    source: "gmail" | "google-calendar";
+    sourceBindingId: string;
+    fingerprint: string;
+    observedAt: string;
+    title: string;
+    summary: string;
+    evidence: string[];
+    entityRefs: string[];
+    workstreamHints: string[];
+    importance: "low" | "normal" | "high";
+    attention: "none" | "response-needed" | "follow-up-overdue" | "meeting-prep" | "commitment" | "scheduling-decision";
+    context: {
+        thread?: GmailMessage[];
+        event?: GoogleCalendarEvent;
+        commitments: string[];
+        suggestedAction?: string;
+    };
+};
+interface GoogleWorkTransport {
+    readGmailChanges(input: {
+        historyId?: string;
+        since: string;
+    }): Promise<{
+        messages: GmailMessage[];
+        historyId?: string;
+    }>;
+    readGmailThread(threadId: string): Promise<GmailMessage[]>;
+    readCalendarChanges(input: {
+        calendarId: string;
+        syncToken?: string;
+        timeMin: string;
+        timeMax: string;
+    }): Promise<{
+        events: GoogleCalendarEvent[];
+        nextSyncToken?: string;
+    }>;
+    sendGmailReply(input: {
+        threadId: string;
+        inReplyToMessageId: string;
+        to: string[];
+        cc?: string[];
+        subject: string;
+        body: string;
+        idempotencyKey: string;
+    }): Promise<{
+        messageId: string;
+        threadId: string;
+    }>;
+    updateCalendarEvent(input: {
+        calendarId: string;
+        eventId: string;
+        patch: Record<string, string>;
+        notifyAttendees: boolean;
+        idempotencyKey: string;
+    }): Promise<{
+        eventId: string;
+        updated: string;
+    }>;
+}
+declare function extractCommitments(text: string): string[];
+declare function pollGoogleWork(input: {
+    transport: GoogleWorkTransport;
+    cursor: GoogleWorkCursor;
+    gmailBindingId: string;
+    calendarBindingId: string;
+    calendarIds: string[];
+    userEmail: string;
+    now?: Date;
+    lookbackHours?: number;
+    lookaheadHours?: number;
+    unansweredHours?: number;
+}): Promise<{
+    cursor: GoogleWorkCursor;
+    evidence: GoogleWorkEvidence[];
+}>;
+declare function executeGoogleWorkAction(input: {
+    transport: GoogleWorkTransport;
+    actionType: string;
+    idempotencyKey: string;
+    payload: Record<string, string>;
+}): Promise<{
+    outcome: string;
+    evidence: string[];
+}>;
+
+export { DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY, DEFAULT_GENERATED_TOOL_PERMISSION_MODEL, GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, buildGeneratedOperationsBrief, buildGeneratedToolAutonomyPrompt, defineRpcContract, executeGoogleWorkAction, extractCommitments, generatedToolCapabilityAllowed, pollGoogleWork, validateGeneratedAppComposition };
+export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedEntityFact, GeneratedEntityMemory, GeneratedExternalAction, GeneratedGoalState, GeneratedOperationsBrief, GeneratedOpportunity, GeneratedOutcomeEvaluation, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityBinding, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, GmailMessage, GoogleCalendarEvent, GooglePerson, GoogleWorkCursor, GoogleWorkEvidence, GoogleWorkTransport, JsonValue, MarkdownProps, NativeCompositionNode, NativeViewLeaf, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };

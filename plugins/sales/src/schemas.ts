@@ -315,6 +315,7 @@ const externalActionSchema = z.object({
   channelBindingId: z.string(),
   target: z.string(),
   payloadSummary: z.string(),
+  payload: z.record(z.string(), z.string()),
   rationale: z.string(),
   evidence: z.array(z.string()),
   status: z.enum([
@@ -354,6 +355,8 @@ const autonomySignalSchema = z.object({
   title: z.string(),
   summary: z.string(),
   evidence: z.array(z.string()),
+  context: z.string().optional(),
+  attention: z.string().optional(),
   reconciledAt: z.string().optional(),
 });
 const autonomyRunSchema = z.object({

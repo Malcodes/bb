@@ -64,6 +64,9 @@ export type GeneratedToolSignal = {
   title: string;
   summary: string;
   evidence: string[];
+  /** Provider-normalized context retained for agent analysis, not rendered by default. */
+  context?: string;
+  attention?: string;
   reconciledAt?: string;
 };
 
@@ -346,6 +349,8 @@ export type GeneratedExternalAction = {
   channelBindingId: string;
   target: string;
   payloadSummary: string;
+  /** Adapter payload is string-only, bounded, and never contains credentials. */
+  payload: Record<string, string>;
   rationale: string;
   evidence: string[];
   status:

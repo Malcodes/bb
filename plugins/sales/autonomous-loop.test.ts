@@ -121,6 +121,13 @@ describe("persistent autonomous capability loop", () => {
             actionType: "send-message",
             target: "contact:acme-champion",
             payloadSummary: "A concise, evidence-backed introduction",
+            payload: {
+              threadId: "thread-acme",
+              inReplyToMessageId: "message-acme",
+              to: JSON.stringify(["champion@acme.com"]),
+              subject: "Introduction",
+              body: "A concise, evidence-backed introduction",
+            },
             rationale: "This is the highest-scoring qualified opportunity.",
             evidence: ["meeting:42"],
           },
