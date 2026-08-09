@@ -79,6 +79,12 @@ export const BUILTIN_PLUGINS = [
     category: "Interface",
   },
   {
+    name: "selfops",
+    pluginId: "selfops",
+    defaultEnabled: true,
+    category: "Workflow management",
+  },
+  {
     name: "secrets",
     pluginId: "secrets",
     defaultEnabled: true,

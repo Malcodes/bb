@@ -97,6 +97,7 @@ describe("official plugin registry invariants", () => {
       memory: "Context & knowledge",
       sales: "Interface",
       secrets: "Developer tools",
+      selfops: "Workflow management",
       "side-chat": "Agent interaction",
       tasks: "Workflow management",
       workflows: "Workflow management",

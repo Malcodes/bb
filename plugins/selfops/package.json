@@ -1,0 +1,36 @@
+{
+  "name": "bb-plugin-selfops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-maintaining and self-improving system layer for BB.",
+  "engines": {
+    "bb": ">=0.0"
+  },
+  "bb": {
+    "name": "Self Ops",
+    "description": "Observe, diagnose, repair, and improve BB's own operation.",
+    "branding": {
+      "icon": "Toolbox"
+    },
+    "server": "./server.ts"
+  },
+  "keywords": [
+    "bb-plugin",
+    "self-improvement",
+    "operations"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@bb/plugin-sdk": "workspace:*",
+    "@types/node": "^22.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^4.1.1"
+  }
+}
