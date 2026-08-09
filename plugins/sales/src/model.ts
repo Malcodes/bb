@@ -4,7 +4,12 @@
  * UI and the agent mutate state exclusively through Mutations.
  */
 
-import type { GeneratedToolAutonomyState } from "@bb/plugin-sdk";
+import {
+  validateGeneratedAppComposition,
+  type GeneratedToolAutonomyState,
+  type NativeCompositionNode,
+} from "@bb/plugin-sdk";
+export type { NativeCompositionNode, NativeViewLeaf } from "@bb/plugin-sdk";
 
 export type RowValue = string | number | boolean | null;
 export type Row = { id: string; [key: string]: RowValue };
@@ -188,6 +193,8 @@ export type Workspace = {
   updatedAt: string;
   collections: Collection[];
   views: View[];
+  /** Optional low-level native composition; omitted preserves sortable stack behavior. */
+  composition?: NativeCompositionNode;
   /** Generic generated-tool operator policy and run/decision state. */
   autonomy?: GeneratedToolAutonomyState;
 };
@@ -224,6 +231,11 @@ export type Mutation =
     }
   | { op: "removeView"; workspaceId: string; viewId: string }
   | { op: "setViewDefinition"; workspaceId: string; view: View }
+  | {
+      op: "setWorkspaceComposition";
+      workspaceId: string;
+      composition?: NativeCompositionNode;
+    }
   | {
       op: "setViewLayout";
       workspaceId: string;
@@ -358,6 +370,20 @@ export function upgradeLegacyMetrics(workspace: Workspace): boolean {
   return changed;
 }
 
+export function validateNativeComposition(
+  workspace: Workspace,
+  composition: NativeCompositionNode,
+): boolean {
+  return validateGeneratedAppComposition(
+    composition,
+    new Set(
+      workspace.views
+        .filter((view) => view.visible !== false)
+        .map((view) => view.id),
+    ),
+  );
+}
+
 /** Apply one mutation to a workspace in place. Returns false if no-op. */
 export function applyMutation(ws: Workspace, m: Mutation): boolean {
   if (m.op === "renameWorkspace") {
@@ -379,6 +405,13 @@ export function applyMutation(ws: Workspace, m: Mutation): boolean {
     if (!view) return false;
     if ((view.visible !== false) === m.visible) return false;
     view.visible = m.visible;
+    return true;
+  }
+  if (m.op === "setWorkspaceComposition") {
+    if (m.workspaceId !== ws.id) return false;
+    if (m.composition && !validateNativeComposition(ws, m.composition))
+      return false;
+    ws.composition = m.composition ? structuredClone(m.composition) : undefined;
     return true;
   }
   if (m.op === "setViewDefinition") {

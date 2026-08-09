@@ -26,13 +26,35 @@ Collections are the source of truth:
 
 Field metadata is reusable across native tables, cards, lists, dashboards, forms, filters, and details. Use concise labels, correct types, select options, required markers, semantic icons, and restrained status tones.
 
-Views are projections. Available primitives:
+Views are state-bound projections. Available primitives:
 - kanban: config {groupBy, lanes, presentation}
 - table: config {columns, sortBy?, sortDir?, filter?, titleField?}
 - cards: config {titleField, subField, flagField?}
 - list: config {titleField, subField}
 - timeline: config {timeField, titleField, subField}
 - metrics: config {metrics:[{id,label,operation:"count"|"sum"|"average",field?,where?:[{field,operator:"equals"|"notEquals"|"in"|"notIn"|"truthy",value?,values?}],format?,hint?}]}
+- decision: config {decision:{promptField,contextFields?,statusField,commentField?,options:[{label,value,tone?}]}}
+
+
+## Native composition grammar
+Do not default every tool to a dashboard or vertical module stack. Compose lower-level native nodes around the problem's information architecture:
+- view leaf: {id,type:"view",viewId,chrome?:"card"|"subtle"|"none",density?:"compact"|"comfortable"|"spacious",emphasis?:"primary"|"normal"|"quiet",span?:{base?,md?,lg?}}
+- surface leaf: {id,type:"surface",surface:"attention"|"operator",...same presentation controls}
+- stack: {id,type:"stack",gap?,children}
+- grid: {id,type:"grid",columns:1..12,gap?,children}; leaf span controls responsive hierarchy
+- split: {id,type:"split",ratio:"1:1"|"1:2"|"2:1"|"1:3"|"3:1",gap?,children:[left,right]}
+- section: {id,type:"section",title?,description?,tone:"plain"|"subtle"|"accent",gap?,children}
+- tabs: {id,type:"tabs",tabs:[{id,label,child}]}
+
+A composition may be supplied at creation or changed with setWorkspaceComposition through generated_tool_evolve_presentation. Maximum depth is 6 and maximum nodes 64. Use explicit view IDs when composing at creation. Every node is native, responsive, accessible, state-bound, persistent, and agent-editable.
+
+Choose structure from the work:
+- relationship management may emphasize a selected relationship/context split and a quiet activity tab;
+- a pipeline may warrant a dominant board with a narrow decision rail;
+- a job search may use a compact stage overview plus focused actions;
+- a project command center may group status, blockers, decisions, and execution into asymmetric sections;
+- research may organize evidence and synthesis in tabs or reading-oriented sections.
+These are examples, not templates. Do not force similarity when the information architecture differs.
 
 Metrics MUST be live declarative computations over a collection, never agent-calculated snapshot strings. Give a metrics view the relevant collectionId. Examples:
 - Offer: {operation:"count", where:[{field:"stage",operator:"equals",value:"Offer"}]}
@@ -83,7 +105,7 @@ Generated workspaces are projections of agent-maintained state. Shared connector
 Tools:
 - sales_list_workspaces: list workspaces created here plus pinned generated tools.
 - sales_read_workspace {workspaceId}: read current collections, views, and revision.
-- sales_create_workspace {title,description?,icon?,collections,views}: create a persistent native tool. Use concise kebab-case collection/view ids and seed useful realistic rows. It returns workspaceId, the workspace, and a canonical renderDirective.
+- sales_create_workspace {title,description?,icon?,collections,views,composition?}: create a persistent native tool. Use concise kebab-case collection/view ids and seed useful realistic rows. It returns workspaceId, the workspace, and a canonical renderDirective.
 - sales_mutate_workspace {workspaceId,expectedRevision?,mutations}: moveRow, patchRow, addRow, removeRow, reorderViews, setViewVisibility, removeView, setViewLayout, renameWorkspace.
 - generated_tool_configure_autonomy: set a persistent goal, constraints, cadence, shared source bindings, and the four permission levels for any generated tool.
 - generated_operations_ingest_signal: normalize/deduplicate and route evidence across canonical entities and workspace projections from a granted email, calendar, meeting-transcript, contacts, files, web, or custom connector binding.

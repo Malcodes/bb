@@ -195,3 +195,111 @@ it("updates inline and pinned surfaces immediately when an agent hides or remove
     ).toBeDefined();
   });
 });
+
+it("renders a nested native composition with asymmetric split, chrome-free leaves, and accessible tabs", async () => {
+  const composed = {
+    ...workspace,
+    id: "ws_composed",
+    collections: [
+      ...workspace.collections,
+      {
+        id: "research",
+        name: "Research",
+        fields: ["title", "status"],
+        rows: [{ id: "e1", title: "Verified evidence", status: "Ready" }],
+      },
+    ],
+    views: [
+      {
+        id: "relationships",
+        primitive: "cards" as const,
+        title: "Relationships",
+        collectionId: "prospects",
+        config: { titleField: "company", subField: "stage" },
+      },
+      {
+        id: "evidence",
+        primitive: "table" as const,
+        title: "Evidence",
+        collectionId: "research",
+        config: { columns: ["title", "status"] },
+      },
+      {
+        id: "synthesis",
+        primitive: "cards" as const,
+        title: "Synthesis",
+        collectionId: "research",
+        config: { titleField: "title", subField: "status" },
+      },
+    ],
+    composition: {
+      id: "relationship-workbench",
+      type: "split" as const,
+      ratio: "1:2" as const,
+      gap: "spacious" as const,
+      children: [
+        {
+          id: "relationship-list",
+          type: "view" as const,
+          viewId: "relationships",
+          chrome: "none" as const,
+          density: "compact" as const,
+        },
+        {
+          id: "research-context",
+          type: "tabs" as const,
+          tabs: [
+            {
+              id: "evidence-tab",
+              label: "Evidence",
+              child: {
+                id: "evidence-view",
+                type: "view" as const,
+                viewId: "evidence",
+                emphasis: "primary" as const,
+              },
+            },
+            {
+              id: "synthesis-tab",
+              label: "Synthesis",
+              child: {
+                id: "synthesis-view",
+                type: "view" as const,
+                viewId: "synthesis",
+                chrome: "subtle" as const,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const composedRpc = {
+    ...rpc,
+    getWorkspace: () => composed,
+    mutate: () => composed,
+    setPinned: () => composed,
+  };
+  const surface = renderSlot(
+    app.navPanels[0]!,
+    { subPath: "ws_composed" },
+    { rpc: composedRpc },
+  );
+
+  await waitFor(() =>
+    expect(
+      surface.container.querySelector(
+        '[data-composition-node="relationship-workbench"]',
+      ),
+    ).toBeTruthy(),
+  );
+  const scope = within(surface.container);
+  expect(scope.getByRole("tab", { name: "Evidence" })).toBeDefined();
+  expect(scope.getByRole("tab", { name: "Synthesis" })).toBeDefined();
+  expect(scope.getByText("Verified evidence")).toBeDefined();
+  expect(
+    surface.container.querySelector(
+      '[data-composition-node="relationship-list"]',
+    ),
+  ).toBeTruthy();
+});

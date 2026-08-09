@@ -13,6 +13,7 @@ import {
   applyMutation,
   newId,
   upgradeLegacyMetrics,
+  validateNativeComposition,
   type Mutation,
   type Workspace,
 } from "./src/model.js";
@@ -278,7 +279,13 @@ export default async function plugin(bb: BbPluginApi) {
         ...view,
         id: view.id ?? newId("view"),
       })),
+      composition: input.composition,
     };
+    if (ws.composition && !validateNativeComposition(ws, ws.composition)) {
+      throw new Error(
+        "composition is invalid or references missing/hidden view ids; give composed views explicit ids",
+      );
+    }
     all.push(ws);
     await saveAll(all);
     changed(ws.id);

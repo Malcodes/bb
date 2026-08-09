@@ -296,6 +296,62 @@ const autonomyStateSchema = z.object({
   recommendations: z.array(autonomyRecommendationSchema),
 });
 
+export const nativeCompositionNodeSchema: z.ZodType<
+  import("./model.js").NativeCompositionNode
+> = z.lazy(() =>
+  z.discriminatedUnion("type", [
+    z
+      .object({
+        id: z.string().min(1),
+        type: z.literal("view"),
+        viewId: z.string().min(1),
+        chrome: z.enum(["card", "subtle", "none"]).optional(),
+        density: z.enum(["compact", "comfortable", "spacious"]).optional(),
+        emphasis: z.enum(["primary", "normal", "quiet"]).optional(),
+        span: z
+          .object({
+            base: z.number().int().min(1).max(12).optional(),
+            md: z.number().int().min(1).max(12).optional(),
+            lg: z.number().int().min(1).max(12).optional(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict(),
+    z
+      .object({
+        id: z.string().min(1),
+        type: z.enum(["stack", "grid", "split", "section"]),
+        title: z.string().max(120).optional(),
+        description: z.string().max(300).optional(),
+        gap: z.enum(["none", "compact", "normal", "spacious"]).optional(),
+        columns: z.number().int().min(1).max(12).optional(),
+        ratio: z.enum(["1:1", "1:2", "2:1", "1:3", "3:1"]).optional(),
+        tone: z.enum(["plain", "subtle", "accent"]).optional(),
+        children: z.array(nativeCompositionNodeSchema).min(1).max(24),
+      })
+      .strict(),
+    z
+      .object({
+        id: z.string().min(1),
+        type: z.literal("tabs"),
+        tabs: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                label: z.string().min(1).max(80),
+                child: nativeCompositionNodeSchema,
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(8),
+      })
+      .strict(),
+  ]),
+);
+
 export const workspaceSchema = z.object({
   id: z.string().min(1),
   originThreadId: z.string().min(1),
@@ -309,6 +365,7 @@ export const workspaceSchema = z.object({
   updatedAt: z.string(),
   collections: z.array(collectionSchema),
   views: z.array(viewSchema),
+  composition: nativeCompositionNodeSchema.optional(),
   autonomy: autonomyStateSchema.optional(),
 });
 
@@ -354,6 +411,13 @@ export const presentationMutationSchema = z.discriminatedUnion("op", [
       op: z.literal("setViewDefinition"),
       workspaceId: z.string().min(1),
       view: viewSchema,
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setWorkspaceComposition"),
+      workspaceId: z.string().min(1),
+      composition: nativeCompositionNodeSchema.optional(),
     })
     .strict(),
   z
@@ -419,6 +483,13 @@ export const mutationSchema = z.discriminatedUnion("op", [
     .strict(),
   z
     .object({
+      op: z.literal("setWorkspaceComposition"),
+      workspaceId: z.string().min(1),
+      composition: nativeCompositionNodeSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
       op: z.literal("setViewLayout"),
       workspaceId: z.string().min(1),
       viewId: z.string().min(1),
@@ -446,4 +517,5 @@ export const createWorkspaceInputSchema = z.object({
         .extend({ id: z.string().min(1).optional() }),
     )
     .min(1),
+  composition: nativeCompositionNodeSchema.optional(),
 });

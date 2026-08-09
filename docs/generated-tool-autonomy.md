@@ -30,3 +30,18 @@ Generated-tool implementations adapt their domain state to this shared contract;
 3. **BB platform/runtime** — stable infrastructure outside generated-tool self-improvement authority. Operator agents cannot use presentation evolution to edit host code, plugin runtime, connectors, permission enforcement, or platform configuration.
 
 The default human projection should contain information needed to understand, decide, or act. Evidence, ranked intermediate outputs, and operator activity may remain available to agents without being rendered. A decision module must provide the bounded interaction required to resolve it, rather than merely describe the decision.
+
+## Low-level native composition
+
+Generated tools are not restricted to one high-level page template. The shared SDK exports a bounded recursive native composition tree:
+
+- state-bound view leaves and BB-owned attention/operator surfaces;
+- stack and responsive grid containers;
+- asymmetric two-pane splits;
+- semantic sections;
+- accessible tabs;
+- per-leaf chrome, density, emphasis, and responsive span controls.
+
+Composition is presentation state: persistent, agent-editable, schema-validated, responsive, and independent of operational collections. The safety envelope allows at most 64 nodes, six levels, 24 children per container, eight tabs, and only references visible registered views. Existing workspaces without a composition keep the sortable module stack, so this is additive rather than a migration cliff.
+
+Agents should derive composition from the actual information architecture. Relationship work, pipelines, job searches, project command centers, and research should not converge visually unless their hierarchy and interaction needs genuinely match. Arbitrary HTML remains an escape hatch only when this native vocabulary cannot express a genuinely novel interface.

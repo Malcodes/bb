@@ -10,6 +10,7 @@
 export * from "./app-contract.js";
 export * from "./backend-contract.js";
 export * from "./generated-app-principles.js";
+export * from "./generated-app-composition.js";
 export * from "./generated-tool-autonomy.js";
 export type * from "./json-value.js";
 export * from "./rpc-contract.js";

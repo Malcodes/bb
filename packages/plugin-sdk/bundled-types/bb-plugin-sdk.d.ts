@@ -260,9 +260,9 @@ declare const hostSchema: z$1.ZodObject<{
         disconnected: "disconnected";
     }>;
     maxPermissionMode: z$1.ZodEnum<{
-        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
+        full: "full";
     }>;
     lastSeenAt: z$1.ZodNullable<z$1.ZodNumber>;
     lastRejectedProtocolVersion: z$1.ZodNullable<z$1.ZodNumber>;
@@ -508,9 +508,9 @@ declare const serviceTierSchema: z$1.ZodEnum<{
 }>;
 type ServiceTier = z$1.infer<typeof serviceTierSchema>;
 declare const permissionModeSchema: z$1.ZodEnum<{
-    full: "full";
     auto: "auto";
     "accept-edits": "accept-edits";
+    full: "full";
 }>;
 type PermissionMode = z$1.infer<typeof permissionModeSchema>;
 declare const promptInputSchema: z$1.ZodDiscriminatedUnion<[z$1.ZodObject<{
@@ -613,9 +613,9 @@ declare const resolvedThreadExecutionOptionsSchema: z$1.ZodObject<{
         ultra: "ultra";
     }>;
     permissionMode: z$1.ZodEnum<{
-        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
+        full: "full";
     }>;
     source: z$1.ZodEnum<{
         "client/thread/start": "client/thread/start";
@@ -642,9 +642,9 @@ declare const projectExecutionDefaultsSchema: z$1.ZodObject<{
         ultra: "ultra";
     }>;
     permissionMode: z$1.ZodEnum<{
-        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
+        full: "full";
     }>;
 }, z$1.core.$strip>;
 type ProjectExecutionDefaults = z$1.infer<typeof projectExecutionDefaultsSchema>;
@@ -1757,9 +1757,9 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         }>;
         permissionMode: z$1.ZodEnum<{
             readonly: "readonly";
-            full: "full";
             auto: "auto";
             "accept-edits": "accept-edits";
+            full: "full";
             "workspace-write": "workspace-write";
         }>;
     }, z$1.core.$strip>;
@@ -1962,9 +1962,9 @@ declare const providerInfoSchema: z$1.ZodObject<{
         supportsUserQuestion: z$1.ZodBoolean;
         supportsFork: z$1.ZodBoolean;
         supportedPermissionModes: z$1.ZodArray<z$1.ZodEnum<{
-            full: "full";
             auto: "auto";
             "accept-edits": "accept-edits";
+            full: "full";
         }>>;
     }, z$1.core.$strip>;
     composerActions: z$1.ZodArray<z$1.ZodDiscriminatedUnion<[z$1.ZodObject<{
@@ -2145,9 +2145,9 @@ declare const threadQueuedMessageSchema: z$1.ZodObject<{
         ultra: "ultra";
     }>;
     permissionMode: z$1.ZodEnum<{
-        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
+        full: "full";
     }>;
     serviceTier: z$1.ZodEnum<{
         default: "default";
@@ -2497,8 +2497,8 @@ declare const skillListResponseSchema: z$1.ZodObject<{
         name: z$1.ZodString;
         description: z$1.ZodNullable<z$1.ZodString>;
         provider: z$1.ZodNullable<z$1.ZodEnum<{
-            "claude-code": "claude-code";
             codex: "codex";
+            "claude-code": "claude-code";
         }>>;
         scope: z$1.ZodEnum<{
             plugin: "plugin";
@@ -2843,8 +2843,8 @@ declare const environmentDiffFileResponseSchema: z$1.ZodObject<{
     path: z$1.ZodString;
     content: z$1.ZodString;
     contentEncoding: z$1.ZodEnum<{
-        base64: "base64";
         utf8: "utf8";
+        base64: "base64";
     }>;
     mimeType: z$1.ZodOptional<z$1.ZodString>;
     sizeBytes: z$1.ZodNumber;
@@ -2857,8 +2857,8 @@ declare const environmentArchiveThreadsResponseSchema: z$1.ZodObject<{
 type EnvironmentArchiveThreadsResponse = z$1.infer<typeof environmentArchiveThreadsResponseSchema>;
 declare const pullRequestMergeMethodSchema: z$1.ZodEnum<{
     merge: "merge";
-    rebase: "rebase";
     squash: "squash";
+    rebase: "rebase";
 }>;
 type PullRequestMergeMethod = z$1.infer<typeof pullRequestMergeMethodSchema>;
 declare const commitActionResponseSchema: z$1.ZodObject<{
@@ -2889,8 +2889,8 @@ declare const pullRequestMergeActionResponseSchema: z$1.ZodObject<{
     action: z$1.ZodLiteral<"pull_request_merge">;
     method: z$1.ZodEnum<{
         merge: "merge";
-        rebase: "rebase";
         squash: "squash";
+        rebase: "rebase";
     }>;
     message: z$1.ZodString;
 }, z$1.core.$strip>;
@@ -9388,8 +9388,8 @@ declare const threadTimelineResponseSchema: z$1.ZodObject<{
     activePromptMode: z$1.ZodNullable<z$1.ZodObject<{
         mode: z$1.ZodLiteral<"plan">;
         providerId: z$1.ZodEnum<{
-            "claude-code": "claude-code";
             codex: "codex";
+            "claude-code": "claude-code";
         }>;
         prompt: z$1.ZodString;
     }, z$1.core.$strict>>;
@@ -12914,6 +12914,53 @@ interface BbPluginApi {
  */
 declare const GENERATED_APP_AGENT_PRINCIPLES = "## Generated-app operating principle: the human is the orchestrator, not the operator\n\nBuild generated interfaces and workflows so agents perform as much ongoing operational work as reasonably possible. The human should primarily set goals, approve important decisions, correct direction, and inspect outcomes\u2014not manually maintain fields, move records, fill forms, update statuses, or babysit pipelines.\n\nWhen designing or modifying any BB-generated app:\n- Prefer agent-maintained state over human data entry.\n- Prefer proactive monitoring, enrichment, research, classification, prioritization, follow-up preparation, and recommendations over passive record storage.\n- Treat Kanban boards, dashboards, metrics, queues, tables, and lists as human oversight surfaces, not the primary mechanism for maintaining truth.\n- If data can reasonably be inferred, researched, synchronized, or updated by an agent, do that instead of asking the human to enter it.\n- Surface exceptions, decisions, approvals, uncertainty, and high-value actions to the human.\n- Keep supporting evidence, provenance, history, and underlying structured data available to agents even when hidden from the human UI.\n- Optimize the rendered app around: \"What does the human need to see or decide next?\"\n- Avoid traditional CRM ergonomics where maintaining the system becomes work in itself.\n- Before adding any feature, ask internally: \"Can an agent own this task instead?\" If yes, design it agent-first.\n\nThe product-level measure of success is human capability amplification, not automation volume: increase the number and ambition of objectives one person can pursue, the situational awareness they can retain, the quality and speed of their decisions, and the operational surface area they can govern. Automation is useful only insofar as it creates that leverage.\n\nSales/GTM is one proving domain, not the platform boundary. These principles are domain-independent.\n\nA generated app is therefore an agent-operated system with a human oversight and decision surface\u2014not a passive database that transfers clerical work to the user.";
 
+/** Low-level, bounded, native composition vocabulary shared by generated tools. */
+type NativeViewLeaf = {
+    id: string;
+    type: "view";
+    viewId: string;
+    chrome?: "card" | "subtle" | "none";
+    density?: "compact" | "comfortable" | "spacious";
+    emphasis?: "primary" | "normal" | "quiet";
+    span?: {
+        base?: number;
+        md?: number;
+        lg?: number;
+    };
+};
+type NativeCompositionNode = NativeViewLeaf | {
+    id: string;
+    type: "surface";
+    surface: "attention" | "operator";
+    chrome?: "card" | "subtle" | "none";
+    density?: "compact" | "comfortable" | "spacious";
+    emphasis?: "primary" | "normal" | "quiet";
+    span?: {
+        base?: number;
+        md?: number;
+        lg?: number;
+    };
+} | {
+    id: string;
+    type: "stack" | "grid" | "split" | "section";
+    title?: string;
+    description?: string;
+    gap?: "none" | "compact" | "normal" | "spacious";
+    columns?: number;
+    ratio?: "1:1" | "1:2" | "2:1" | "1:3" | "3:1";
+    tone?: "plain" | "subtle" | "accent";
+    children: NativeCompositionNode[];
+} | {
+    id: string;
+    type: "tabs";
+    tabs: Array<{
+        id: string;
+        label: string;
+        child: NativeCompositionNode;
+    }>;
+};
+declare function validateGeneratedAppComposition(composition: NativeCompositionNode, availableViewIds: ReadonlySet<string>): boolean;
+
 /** Generic persistent autonomy contract for BB-generated tools. */
 type GeneratedToolSourceKind = "email" | "calendar" | "meeting-transcript" | "contacts" | "files" | "web" | "custom";
 /** A binding to a BB/shared connector. No generated tool embeds credentials. */
@@ -13034,5 +13081,5 @@ type GeneratedToolCapabilityRequest = {
 /** Central policy decision used by connector/action adapters before side effects. */
 declare function generatedToolCapabilityAllowed(permissions: GeneratedToolPermissionModel, request: GeneratedToolCapabilityRequest): boolean;
 
-export { DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY, DEFAULT_GENERATED_TOOL_PERMISSION_MODEL, GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, buildGeneratedOperationsBrief, buildGeneratedToolAutonomyPrompt, defineRpcContract, generatedToolCapabilityAllowed };
-export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedOperationsBrief, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, JsonValue, MarkdownProps, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };
+export { DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY, DEFAULT_GENERATED_TOOL_PERMISSION_MODEL, GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, buildGeneratedOperationsBrief, buildGeneratedToolAutonomyPrompt, defineRpcContract, generatedToolCapabilityAllowed, validateGeneratedAppComposition };
+export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedOperationsBrief, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, JsonValue, MarkdownProps, NativeCompositionNode, NativeViewLeaf, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };

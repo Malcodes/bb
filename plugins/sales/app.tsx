@@ -37,6 +37,7 @@ import { Icon } from "@bb/shared-ui/icon";
 import {
   applyMutation,
   type Mutation,
+  type NativeCompositionNode,
   type View,
   type Workspace,
 } from "./src/model.js";
@@ -382,6 +383,272 @@ function AutonomyPanel({
   );
 }
 
+const compositionGap = {
+  none: "gap-0",
+  compact: "gap-2",
+  normal: "gap-3",
+  spacious: "gap-6",
+} as const;
+const compositionColumns = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 md:grid-cols-2",
+  3: "grid-cols-1 md:grid-cols-2 xl:grid-cols-3",
+  4: "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4",
+  5: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5",
+  6: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6",
+  7: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7",
+  8: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8",
+  9: "grid-cols-1 sm:grid-cols-3 xl:grid-cols-6 2xl:grid-cols-9",
+  10: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 2xl:grid-cols-10",
+  11: "grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 2xl:grid-cols-11",
+  12: "grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 2xl:grid-cols-12",
+} as const;
+const compositionSpan = {
+  1: "col-span-1",
+  2: "col-span-1 md:col-span-2",
+  3: "col-span-1 md:col-span-2 xl:col-span-3",
+  4: "col-span-1 md:col-span-2 xl:col-span-4",
+  5: "col-span-1 md:col-span-2 xl:col-span-5",
+  6: "col-span-1 md:col-span-2 xl:col-span-6",
+  7: "col-span-1 md:col-span-2 xl:col-span-7",
+  8: "col-span-1 md:col-span-2 xl:col-span-8",
+  9: "col-span-1 md:col-span-2 xl:col-span-9",
+  10: "col-span-1 md:col-span-2 xl:col-span-10",
+  11: "col-span-1 md:col-span-2 xl:col-span-11",
+  12: "col-span-full",
+} as const;
+
+function NativeFrame({
+  node,
+  title,
+  children,
+  height,
+}: {
+  node: Extract<NativeCompositionNode, { type: "view" | "surface" }>;
+  title?: string;
+  children: ReactNode;
+  height?: number;
+}) {
+  const chrome = node.chrome ?? "card";
+  const density = node.density ?? "comfortable";
+  const emphasis = node.emphasis ?? "normal";
+  const padding =
+    density === "compact" ? "p-0" : density === "spacious" ? "p-3" : "p-1.5";
+  const span = node.span?.lg ?? node.span?.md ?? node.span?.base ?? 12;
+  if (chrome === "none") {
+    return (
+      <div
+        data-composition-node={node.id}
+        className={`min-h-0 min-w-0 ${compositionSpan[span as keyof typeof compositionSpan]}`}
+        style={{ height }}
+      >
+        {children}
+      </div>
+    );
+  }
+  return (
+    <section
+      data-composition-node={node.id}
+      className={`min-h-0 min-w-0 overflow-hidden rounded-lg border ${
+        emphasis === "primary"
+          ? "border-primary/25 bg-primary/[0.025] shadow-sm"
+          : emphasis === "quiet" || chrome === "subtle"
+            ? "border-border/50 bg-muted/20"
+            : "border-border/75 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)]"
+      } ${compositionSpan[span as keyof typeof compositionSpan]}`}
+      style={{ height }}
+    >
+      {title ? (
+        <header
+          className={`border-b border-border/50 px-3 ${density === "compact" ? "py-1.5" : "py-2"}`}
+        >
+          <h2 className="text-[11px] font-semibold text-foreground/75">
+            {title}
+          </h2>
+        </header>
+      ) : null}
+      <div
+        className={`min-h-0 ${height ? "h-[calc(100%-2rem)] overflow-hidden" : ""} ${padding}`}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function CompositionTabs({
+  node,
+  render,
+}: {
+  node: Extract<NativeCompositionNode, { type: "tabs" }>;
+  render(node: NativeCompositionNode): ReactNode;
+}) {
+  const [active, setActive] = useState(node.tabs[0]?.id ?? "");
+  useEffect(() => {
+    if (!node.tabs.some((tab) => tab.id === active))
+      setActive(node.tabs[0]?.id ?? "");
+  }, [active, node.tabs]);
+  const selected = node.tabs.find((tab) => tab.id === active) ?? node.tabs[0];
+  return (
+    <section
+      data-composition-node={node.id}
+      className="min-w-0 overflow-hidden rounded-lg border border-border/70 bg-background"
+    >
+      <div
+        role="tablist"
+        className="flex gap-1 border-b border-border/60 px-2 pt-1.5"
+      >
+        {node.tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={tab.id === selected?.id}
+            onClick={() => setActive(tab.id)}
+            className={`rounded-t px-2.5 py-1.5 text-[11px] font-medium ${
+              tab.id === selected?.id
+                ? "border-b-2 border-primary text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div role="tabpanel" className="p-2.5">
+        {selected ? render(selected.child) : null}
+      </div>
+    </section>
+  );
+}
+
+function NativeComposition({
+  workspace,
+  mutate,
+  resolveRecommendation,
+}: {
+  workspace: Workspace;
+  mutate(mutations: Mutation[]): void;
+  resolveRecommendation(
+    id: string,
+    decision: "approved" | "rejected" | "resolved",
+  ): void;
+}) {
+  const render = (node: NativeCompositionNode): ReactNode => {
+    if (node.type === "view") {
+      const view = workspace.views.find(
+        (candidate) =>
+          candidate.id === node.viewId && candidate.visible !== false,
+      );
+      if (!view) return null;
+      return (
+        <NativeFrame
+          key={node.id}
+          node={node}
+          title={node.chrome === "none" ? undefined : view.title}
+          height={
+            view.primitive === "metrics" ? undefined : view.layout?.height
+          }
+        >
+          <ViewRenderer view={view} workspace={workspace} mutate={mutate} />
+        </NativeFrame>
+      );
+    }
+    if (node.type === "surface") {
+      return (
+        <NativeFrame key={node.id} node={node}>
+          {node.surface === "attention" ? (
+            <AttentionSummary workspace={workspace} />
+          ) : (
+            <AutonomyPanel
+              workspace={workspace}
+              onResolve={resolveRecommendation}
+            />
+          )}
+        </NativeFrame>
+      );
+    }
+    if (node.type === "tabs")
+      return <CompositionTabs key={node.id} node={node} render={render} />;
+    const gap = compositionGap[node.gap ?? "normal"];
+    if (node.type === "stack") {
+      return (
+        <div
+          key={node.id}
+          data-composition-node={node.id}
+          className={`flex min-w-0 flex-col ${gap}`}
+        >
+          {node.children.map(render)}
+        </div>
+      );
+    }
+    if (node.type === "grid") {
+      const columns =
+        compositionColumns[
+          (node.columns ?? 12) as keyof typeof compositionColumns
+        ];
+      return (
+        <div
+          key={node.id}
+          data-composition-node={node.id}
+          className={`grid min-w-0 ${columns} ${gap}`}
+        >
+          {node.children.map(render)}
+        </div>
+      );
+    }
+    if (node.type === "split") {
+      const ratio = node.ratio ?? "1:1";
+      const template = {
+        "1:1": "md:grid-cols-2",
+        "1:2": "md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]",
+        "2:1": "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]",
+        "1:3": "md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]",
+        "3:1": "md:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]",
+      }[ratio];
+      return (
+        <div
+          key={node.id}
+          data-composition-node={node.id}
+          className={`grid min-w-0 grid-cols-1 ${template} ${gap}`}
+        >
+          {node.children.map(render)}
+        </div>
+      );
+    }
+    return (
+      <section
+        key={node.id}
+        data-composition-node={node.id}
+        className={`min-w-0 rounded-xl ${
+          node.tone === "accent"
+            ? "border border-primary/15 bg-primary/[0.025] p-3"
+            : node.tone === "subtle"
+              ? "bg-muted/25 p-3"
+              : ""
+        }`}
+      >
+        {node.title ? (
+          <h2 className="text-sm font-semibold tracking-[-0.01em]">
+            {node.title}
+          </h2>
+        ) : null}
+        {node.description ? (
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {node.description}
+          </p>
+        ) : null}
+        <div
+          className={`${node.title || node.description ? "mt-2.5" : ""} flex min-w-0 flex-col ${gap}`}
+        >
+          {node.children.map(render)}
+        </div>
+      </section>
+    );
+  };
+  return <>{render(workspace.composition!)}</>;
+}
+
 function WorkspaceSurface({
   workspaceId,
   fullWidth = false,
@@ -527,48 +794,56 @@ function WorkspaceSurface({
             : "overflow-x-auto p-3"
         }
       >
-        <div className="flex min-w-0 flex-col gap-2.5">
-          <AttentionSummary workspace={workspace} />
-          <AutonomyPanel
+        {workspace.composition ? (
+          <NativeComposition
             workspace={workspace}
-            onResolve={resolveRecommendation}
+            mutate={mutate}
+            resolveRecommendation={resolveRecommendation}
           />
-          <DndContext
-            sensors={moduleSensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleModuleDragEnd}
-          >
-            <SortableContext
-              items={visibleViews.map((view) => view.id)}
-              strategy={verticalListSortingStrategy}
+        ) : (
+          <div className="flex min-w-0 flex-col gap-2.5">
+            <AttentionSummary workspace={workspace} />
+            <AutonomyPanel
+              workspace={workspace}
+              onResolve={resolveRecommendation}
+            />
+            <DndContext
+              sensors={moduleSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleModuleDragEnd}
             >
-              <div className="flex min-w-0 flex-col gap-2.5">
-                {visibleViews.map((view) => (
-                  <WorkspaceModule
-                    key={view.id}
-                    view={view}
-                    onResize={(height) =>
-                      mutate([
-                        {
-                          op: "setViewLayout",
-                          workspaceId: workspace.id,
-                          viewId: view.id,
-                          height,
-                        },
-                      ])
-                    }
-                  >
-                    <ViewRenderer
+              <SortableContext
+                items={visibleViews.map((view) => view.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex min-w-0 flex-col gap-2.5">
+                  {visibleViews.map((view) => (
+                    <WorkspaceModule
+                      key={view.id}
                       view={view}
-                      workspace={workspace}
-                      mutate={mutate}
-                    />
-                  </WorkspaceModule>
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
+                      onResize={(height) =>
+                        mutate([
+                          {
+                            op: "setViewLayout",
+                            workspaceId: workspace.id,
+                            viewId: view.id,
+                            height,
+                          },
+                        ])
+                      }
+                    >
+                      <ViewRenderer
+                        view={view}
+                        workspace={workspace}
+                        mutate={mutate}
+                      />
+                    </WorkspaceModule>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        )}
       </div>
     </section>
   );
