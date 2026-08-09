@@ -368,15 +368,24 @@ const autonomyRunSchema = z.object({
   summary: z.string().optional(),
   error: z.string().optional(),
 });
-const autonomyRecommendationSchema = z.object({
+const attentionItemOptionSchema = z
+  .object({
+    id: z.string(),
+    label: z.string(),
+    description: z.string().optional(),
+  })
+  .strict();
+const attentionItemSchema = z.object({
   id: z.string(),
-  kind: z.enum(["recommendation", "exception", "external-action"]),
+  kind: z.enum(["action-proposal", "decision", "exception", "information"]),
   title: z.string(),
   rationale: z.string(),
   evidence: z.array(z.string()),
-  proposedAction: z.string().optional(),
   externalActionId: z.string().optional(),
-  status: z.enum(["open", "approved", "rejected", "resolved"]),
+  options: z.array(attentionItemOptionSchema).max(8).optional(),
+  error: z.string().optional(),
+  retryAction: z.string().optional(),
+  status: z.enum(["open", "approved", "rejected", "resolved", "dismissed"]),
   createdAt: z.string(),
   resolvedAt: z.string().optional(),
 });
@@ -391,7 +400,7 @@ const autonomyStateSchema = z.object({
   sources: z.array(sourceBindingSchema),
   signals: z.array(autonomySignalSchema),
   runs: z.array(autonomyRunSchema),
-  recommendations: z.array(autonomyRecommendationSchema),
+  attentionItems: z.array(attentionItemSchema),
 });
 
 export const nativeCompositionNodeSchema: z.ZodType<

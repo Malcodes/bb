@@ -149,12 +149,12 @@ export const salesRpcContract = defineRpcContract({
       .strict(),
     output: workspaceSchema.strict(),
   },
-  resolveRecommendation: {
+  resolveAttentionItem: {
     input: z
       .object({
         workspaceId: z.string().min(1),
-        recommendationId: z.string().min(1),
-        decision: z.enum(["approved", "rejected", "resolved"]),
+        itemId: z.string().min(1),
+        decision: z.enum(["approved", "rejected", "resolved", "dismissed"]),
       })
       .strict(),
     output: workspaceSchema.strict(),
@@ -244,7 +244,7 @@ export default async function plugin(
         sources: [],
         signals: [],
         runs: [],
-        recommendations: [],
+        attentionItems: [],
       };
     }
     const legacy = ws.autonomy as GeneratedToolAutonomyState & {
@@ -278,6 +278,37 @@ export default async function plugin(
     legacy.outcomes ??= [];
     legacy.sources ??= [];
     legacy.signals ??= [];
+    (legacy as Record<string, unknown>).attentionItems ??= [];
+    // Migrate legacy recommendations
+    if ("recommendations" in (legacy as Record<string, unknown>)) {
+      const oldRecs = (legacy as Record<string, unknown>)
+        .recommendations as unknown[];
+      if (Array.isArray(oldRecs) && oldRecs.length > 0) {
+        (legacy as Record<string, unknown>).attentionItems = [
+          ...oldRecs.map((r: unknown) => {
+            const rec = r as Record<string, unknown>;
+            return {
+              id: rec.id,
+              kind:
+                rec.kind === "external-action"
+                  ? ("action-proposal" as const)
+                  : rec.kind === "recommendation"
+                    ? ("information" as const)
+                    : ("exception" as const),
+              title: rec.title,
+              rationale: rec.rationale,
+              evidence: (rec.evidence as string[]) ?? [],
+              externalActionId: (rec.externalActionId as string) ?? undefined,
+              status: (rec.status as string) ?? "open",
+              createdAt: rec.createdAt as string,
+              resolvedAt: (rec.resolvedAt as string) ?? undefined,
+            };
+          }),
+          ...((legacy as Record<string, unknown>).attentionItems as unknown[]),
+        ];
+      }
+      delete (legacy as Record<string, unknown>).recommendations;
+    }
     legacy.policy.permissions ??= {
       observe: {
         sourceIds: legacy.sources
@@ -544,14 +575,14 @@ export default async function plugin(
             ["follow-up-overdue", "scheduling-decision"].includes(
               evidence.attention,
             ) &&
-            !current.recommendations.some((item) =>
+            !current.attentionItems.some((item) =>
               item.evidence.includes(evidence.fingerprint),
             )
           ) {
             const exception = evidence.attention === "follow-up-overdue";
-            current.recommendations.unshift({
-              id: newId("rec"),
-              kind: exception ? "exception" : "recommendation",
+            current.attentionItems.unshift({
+              id: newId("att"),
+              kind: exception ? "exception" : "information",
               title:
                 evidence.attention === "response-needed"
                   ? `Response needed: ${evidence.title}`
@@ -1214,13 +1245,12 @@ export default async function plugin(
           };
           actionId = action.id;
           state.externalActions.unshift(action);
-          state.recommendations.unshift({
-            id: newId("rec"),
-            kind: "external-action",
+          state.attentionItems.unshift({
+            id: newId("att"),
+            kind: "action-proposal",
             title: input.title,
             rationale: input.rationale,
-            evidence: input.evidence,
-            proposedAction: `${input.actionType} → ${input.target}: ${input.payloadSummary}`,
+            evidence: [input.evidence[0] ?? ""],
             externalActionId: action.id,
             status: "open",
             createdAt: action.createdAt,
@@ -1455,9 +1485,9 @@ export default async function plugin(
             "generated tool must retain at least one visible module",
           );
         }
-        state.recommendations.unshift({
-          id: newId("rec"),
-          kind: "recommendation",
+        state.attentionItems.unshift({
+          id: newId("att"),
+          kind: "information",
           title: "Presentation evolved",
           rationale,
           evidence: ["generated-tool-definition"],
@@ -1471,36 +1501,57 @@ export default async function plugin(
   });
 
   bb.agents.registerTool({
-    name: "generated_tool_report_recommendation",
+    name: "generated_tool_report_attention",
     description:
-      "Surface an evidence-backed recommendation or exception. Use generated_operations_propose_external_action for any consequential external side effect.",
+      "Surface a semantic attention item. Use `action-proposal` kind for external side effects (requires a linked proposed external action via generated_operations_propose_external_action), `decision` kind for genuine options (supply options), `exception` kind for errors (supply error/retryAction), or `information` kind for items the human may dismiss.",
     parameters: z
       .object({
         workspaceId: z.string().min(1),
-        kind: z.enum(["recommendation", "exception"]),
+        kind: z.enum([
+          "action-proposal",
+          "decision",
+          "exception",
+          "information",
+        ]),
         title: z.string().min(1).max(200),
         rationale: z.string().min(1).max(2000),
         evidence: z.array(z.string().max(1000)).min(1).max(20),
-        proposedAction: z.string().max(1000).optional(),
+        options: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                label: z.string().min(1).max(200),
+                description: z.string().max(500).optional(),
+              })
+              .strict(),
+          )
+          .max(8)
+          .optional(),
+        error: z.string().max(2000).optional(),
+        retryAction: z.string().max(1000).optional(),
       })
       .strict(),
     async execute(input) {
       return JSON.stringify(
         toJson(
           await updateWorkspace(input.workspaceId, (workspace) => {
-            autonomy(workspace).recommendations.unshift({
-              id: newId("rec"),
+            autonomy(workspace).attentionItems.unshift({
+              id: newId("att"),
               kind: input.kind,
               title: input.title,
               rationale: input.rationale,
               evidence: input.evidence,
-              proposedAction: input.proposedAction,
+              externalActionId: undefined,
+              options: input.options,
+              error: input.error,
+              retryAction: input.retryAction,
               status: "open",
               createdAt: new Date().toISOString(),
             });
-            autonomy(workspace).recommendations = autonomy(
+            autonomy(workspace).attentionItems = autonomy(
               workspace,
-            ).recommendations.slice(0, 100);
+            ).attentionItems.slice(0, 100);
           }),
         ),
       );
@@ -1521,7 +1572,7 @@ export default async function plugin(
       "generated_operations_claim_approved_action",
       "generated_operations_record_action_outcome",
       "google_work_execute_claimed_action",
-      "generated_tool_report_recommendation",
+      "generated_tool_report_attention",
       "generated_tool_evolve_presentation",
       "generated_operations_ingest_signal",
       "generated_operations_read_brief",
@@ -1590,42 +1641,59 @@ export default async function plugin(
         }),
       );
     },
-    async resolveRecommendation({ workspaceId, recommendationId, decision }) {
+    async resolveAttentionItem({ workspaceId, itemId, decision }) {
       return toJson(
         await updateWorkspace(workspaceId, (workspace) => {
-          const recommendation = autonomy(workspace).recommendations.find(
-            (item) => item.id === recommendationId,
+          const item = autonomy(workspace).attentionItems.find(
+            (candidate) => candidate.id === itemId,
           );
-          if (!recommendation)
-            throw new Error(`recommendation not found: ${recommendationId}`);
+          if (!item) throw new Error(`attention item not found: ${itemId}`);
           const now = new Date().toISOString();
-          recommendation.status = decision;
-          recommendation.resolvedAt = now;
-          if (recommendation.externalActionId) {
-            const action = autonomy(workspace).externalActions.find(
-              (candidate) => candidate.id === recommendation.externalActionId,
-            );
-            if (!action) {
-              throw new Error(
-                `external action not found: ${recommendation.externalActionId}`,
+          if (item.kind === "action-proposal" && decision === "approved") {
+            item.status = "approved";
+            item.resolvedAt = now;
+            if (item.externalActionId) {
+              const action = autonomy(workspace).externalActions.find(
+                (candidate) => candidate.id === item.externalActionId,
               );
-            }
-            if (action.status !== "proposed") {
-              throw new Error(
-                `external action cannot be decided from status ${action.status}`,
-              );
-            }
-            if (decision === "approved") {
+              if (!action) {
+                throw new Error(
+                  `external action not found: ${item.externalActionId}`,
+                );
+              }
+              if (action.status !== "proposed") {
+                throw new Error(
+                  `external action cannot be decided from status ${action.status}`,
+                );
+              }
               action.status = "approved";
               action.approvedAt = now;
-            } else if (decision === "rejected") {
-              action.status = "rejected";
-              action.completedAt = now;
-            } else {
-              throw new Error(
-                "external-action proposals must be approved or rejected",
-              );
             }
+          } else if (
+            item.kind === "action-proposal" &&
+            decision === "rejected"
+          ) {
+            item.status = "rejected";
+            item.resolvedAt = now;
+            if (item.externalActionId) {
+              const action = autonomy(workspace).externalActions.find(
+                (candidate) => candidate.id === item.externalActionId,
+              );
+              if (action && action.status === "proposed") {
+                action.status = "rejected";
+                action.completedAt = now;
+              }
+            }
+          } else if (decision === "dismissed") {
+            item.status = "dismissed";
+            item.resolvedAt = now;
+          } else if (decision === "resolved") {
+            item.status = "resolved";
+            item.resolvedAt = now;
+          } else {
+            throw new Error(
+              `decision "${decision}" is not valid for attention item kind "${item.kind}"`,
+            );
           }
         }),
       );

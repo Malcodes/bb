@@ -95,14 +95,13 @@ describe("generated-tool proactive operator", () => {
     );
 
     await host.harness.callAgentTool(
-      "generated_tool_report_recommendation",
+      "generated_tool_report_attention",
       {
         workspaceId,
         kind: "exception",
         title: "Verified outreach is blocked",
         rationale: "A response would unblock the record.",
         evidence: ["Verified contact page"],
-        proposedAction: "Send the drafted message",
       },
       { threadId: "worker-1", projectId: "project-1" },
     );
@@ -113,7 +112,7 @@ describe("generated-tool proactive operator", () => {
       status: "running",
       workerThreadId: "worker-1",
     });
-    expect(workspace.autonomy.recommendations[0]).toMatchObject({
+    expect(workspace.autonomy.attentionItems[0]).toMatchObject({
       kind: "exception",
       status: "open",
     });
@@ -166,12 +165,12 @@ describe("generated-tool proactive operator", () => {
     expect(secondSignal.entityRefs).toEqual(["company:acme"]);
     expect(secondSignal.summary).toBe("Updated normalized content.");
 
-    workspace = await host.harness.callRpc("resolveRecommendation", {
+    workspace = await host.harness.callRpc("resolveAttentionItem", {
       workspaceId,
-      recommendationId: workspace.autonomy.recommendations[0].id,
+      itemId: workspace.autonomy.attentionItems[0].id,
       decision: "resolved",
     });
-    expect((workspace as any).autonomy.recommendations[0].status).toBe(
+    expect((workspace as any).autonomy.attentionItems[0].status).toBe(
       "resolved",
     );
     await host.harness.dispose();

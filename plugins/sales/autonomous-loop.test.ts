@@ -146,13 +146,13 @@ describe("persistent autonomous capability loop", () => {
     let workspace = (await host.harness.callRpc("getWorkspace", {
       workspaceId,
     })) as any;
-    const recommendation = workspace.autonomy.recommendations.find(
+    const recommendation = workspace.autonomy.attentionItems.find(
       (item: any) => item.externalActionId === action.id,
     );
     expect(recommendation.externalActionId).toBe(action.id);
-    workspace = await host.harness.callRpc("resolveRecommendation", {
+    workspace = await host.harness.callRpc("resolveAttentionItem", {
       workspaceId,
-      recommendationId: recommendation.id,
+      itemId: recommendation.id,
       decision: "approved",
     });
     expect((workspace as any).autonomy.externalActions[0].status).toBe(

@@ -186,7 +186,7 @@ describe("agent-maintained generated-tool definition", () => {
         decision: { promptField: "question", statusField: "decision" },
       },
     });
-    expect(after.autonomy.recommendations[0]).toMatchObject({
+    expect(after.autonomy.attentionItems[0]).toMatchObject({
       title: "Presentation evolved",
       status: "resolved",
     });

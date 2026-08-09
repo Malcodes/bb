@@ -52,6 +52,7 @@ describe("generated operations autonomy contract", () => {
     expect(prompt).toContain("atomically claim the approved action");
     expect(prompt).toContain("evaluate outcomes against goal success criteria");
     expect(prompt).not.toMatch(/sales|job search/i);
+    expect(prompt).toContain("Self-adapting surface");
   });
 
   it("makes connector and side-effect adapters enforce every capability boundary", () => {
@@ -143,10 +144,10 @@ describe("generated operations autonomy contract", () => {
               summary: "Verified two accounts.",
             },
           ],
-          recommendations: [
+          attentionItems: [
             {
               id: "rec1",
-              kind: "external-action",
+              kind: "action-proposal",
               title: "Send proposal",
               rationale: "Terms are ready.",
               evidence: ["meeting:42"],
@@ -170,7 +171,7 @@ describe("generated operations autonomy contract", () => {
     });
     expect(brief.attention[0]).toMatchObject({
       workspaceId: "fractional-ae",
-      kind: "external-action",
+      kind: "action-proposal",
       status: "open",
     });
   });

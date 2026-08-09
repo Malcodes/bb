@@ -171,7 +171,7 @@ describe("unattended Gmail + Calendar operating loop", () => {
         "company-domain:acme.com",
       ]),
     );
-    expect(workspace.autonomy.recommendations).toEqual([]);
+    expect(workspace.autonomy.attentionItems).toEqual([]);
     expect(
       workspace.autonomy.signals.find(
         (signal: any) => signal.attention === "response-needed",
@@ -226,12 +226,12 @@ describe("unattended Gmail + Calendar operating loop", () => {
     workspace = (await host.harness.callRpc("getWorkspace", {
       workspaceId,
     })) as any;
-    const approval = workspace.autonomy.recommendations.find(
+    const approval = workspace.autonomy.attentionItems.find(
       (item: any) => item.externalActionId === action.id,
     );
-    await host.harness.callRpc("resolveRecommendation", {
+    await host.harness.callRpc("resolveAttentionItem", {
       workspaceId,
-      recommendationId: approval.id,
+      itemId: approval.id,
       decision: "approved",
     });
     await host.harness.callAgentTool(

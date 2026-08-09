@@ -120,16 +120,13 @@ function useWorkspace(workspaceId: string) {
     [rpc, workspace, workspaceId],
   );
 
-  const resolveRecommendation = useCallback(
-    (
-      recommendationId: string,
-      decision: "approved" | "rejected" | "resolved",
-    ) => {
+  const resolveAttentionItem = useCallback(
+    (itemId: string, decision: "approved" | "rejected" | "resolved") => {
       if (!workspace) return;
       rpc
-        .call("resolveRecommendation", {
+        .call("resolveAttentionItem", {
           workspaceId,
-          recommendationId,
+          itemId,
           decision,
         })
         .then((next) => {
@@ -143,7 +140,7 @@ function useWorkspace(workspaceId: string) {
     [rpc, workspace, workspaceId],
   );
 
-  return { workspace, error, mutate, setPinned, resolveRecommendation };
+  return { workspace, error, mutate, setPinned, resolveAttentionItem };
 }
 
 const MODULE_MIN_HEIGHT = 280;
@@ -273,42 +270,68 @@ function WorkspaceModule({
   );
 }
 
-function AutonomyPanel({
+function AttentionSurface({
   workspace,
-  onResolve,
+  onDecide,
 }: {
   workspace: Workspace;
-  onResolve(id: string, decision: "approved" | "rejected" | "resolved"): void;
+  onDecide(
+    id: string,
+    decision: "approved" | "rejected" | "resolved" | "dismissed",
+  ): void;
 }) {
   const state = workspace.autonomy;
-  if (!state?.policy.enabled && !state?.recommendations.length) return null;
-  const open = (state?.recommendations ?? []).filter(
+  if (!state?.policy.enabled && !state?.attentionItems?.length) return null;
+  const openItems = (state?.attentionItems ?? []).filter(
     (item) => item.status === "open",
   );
   const activeGoal = state?.goals.find((goal) => goal.status === "active");
-  const latestOutcome = state?.outcomes[0];
+  const recentOutcomes = (state?.outcomes ?? []).slice(0, 3);
   const lastRun = state?.runs[0];
+  const needsYouCount = openItems.length;
+  const totalOpportunities = state?.opportunities?.length ?? 0;
+  const qualifiedCount =
+    state?.opportunities?.filter(
+      (o) => o.status === "qualified" || o.status === "advanced",
+    ).length ?? 0;
+
+  function iconFor(kind: string): string {
+    if (kind === "action-proposal") return "ShieldCheck";
+    if (kind === "decision") return "HelpCircle";
+    if (kind === "exception") return "AlertTriangle";
+    return "Lightbulb";
+  }
+
+  function outcomeIcon(result: string): string {
+    if (result === "positive") return "CheckCircle";
+    if (result === "negative") return "XCircle";
+    return "ArrowRight";
+  }
+
   return (
     <aside
       className="rounded-lg border border-border/75 bg-background"
-      aria-label="Agent operator"
+      aria-label="BB working status"
     >
+      {/* Status header */}
       <header className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
-        <span className="relative flex size-5 items-center justify-center rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">
+        <span className="relative flex size-5 items-center justify-center rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
           <Icon name="AiContentGenerator01" className="size-3.5" />
           {lastRun?.status === "running" ? (
             <span className="absolute -right-0.5 -top-0.5 size-1.5 animate-pulse rounded-full bg-blue-500" />
           ) : null}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold">Agent operator</div>
+          <div className="text-[11px] font-semibold">
+            {lastRun?.status === "running" ? "BB is working" : "BB is ready"}
+          </div>
           <div className="truncate text-[10px] text-muted-foreground">
-            {activeGoal?.objective ||
-              state?.policy.goal ||
+            {activeGoal?.objective?.slice(0, 80) ||
+              state?.policy.goal?.slice(0, 80) ||
               "Working toward your goal"}
           </div>
         </div>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="whitespace-nowrap text-[10px] text-muted-foreground">
           {lastRun?.status === "running"
             ? "Working now"
             : lastRun?.completedAt
@@ -316,88 +339,142 @@ function AutonomyPanel({
               : `Every ${state?.policy.cadenceMinutes ?? 30}m`}
         </span>
       </header>
-      {open.length ? (
-        <div className="divide-y divide-border/60">
-          {open.slice(0, 5).map((item) => (
-            <section
-              key={item.id}
-              className="flex items-start gap-2.5 px-3 py-2.5"
-            >
-              <Icon
-                name={safeIcon(
-                  item.kind === "exception"
-                    ? "AlertTriangle"
-                    : item.kind === "external-action"
-                      ? "ShieldCheck"
-                      : "Lightbulb",
-                  "AlertCircle",
-                )}
-                className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium">{item.title}</div>
-                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                  {item.rationale}
-                </p>
-                {item.evidence.length ? (
-                  <p className="mt-1 truncate text-[10px] text-muted-foreground/80">
-                    Evidence: {item.evidence.join(" · ")}
+
+      {/* Progress summary */}
+      <div className="border-b border-border/40 px-3 py-2">
+        <p className="text-[11px] leading-4 text-muted-foreground">
+          {totalOpportunities} candidates reviewed · {qualifiedCount} qualified
+          {lastRun?.completedAt
+            ? ` · next cycle in ${Math.max(1, Math.round((state?.policy.cadenceMinutes ?? 30) - (Date.now() - Date.parse(lastRun.completedAt)) / 60_000))}m`
+            : ""}
+        </p>
+      </div>
+
+      {/* Needs you section */}
+      {needsYouCount > 0 ? (
+        <>
+          <div className="border-b border-border/40 px-3 py-1.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.065em] text-amber-600">
+              Needs you — {needsYouCount}
+            </span>
+          </div>
+          <div className="divide-y divide-border/40">
+            {openItems.slice(0, 5).map((item) => (
+              <section
+                key={item.id}
+                className="flex items-start gap-2.5 px-3 py-2.5"
+              >
+                <Icon
+                  name={safeIcon(iconFor(item.kind), "AlertCircle")}
+                  className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium">{item.title}</div>
+                  <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+                    {item.rationale}
                   </p>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 gap-1">
-                {item.kind === "external-action" ? (
-                  <>
+                  {item.kind === "decision" && item.options?.length ? (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                      Options: {item.options.map((o) => o.label).join(", ")}
+                    </p>
+                  ) : null}
+                  {item.kind === "exception" && item.error ? (
+                    <p className="mt-0.5 text-[11px] text-red-500/70">
+                      {item.error.slice(0, 120)}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  {item.kind === "action-proposal" ? (
+                    <>
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={() => onDecide(item.id, "approved")}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={() => onDecide(item.id, "rejected")}
+                      >
+                        Reject
+                      </Button>
+                    </>
+                  ) : item.kind === "decision" ? (
                     <Button
                       size="sm"
                       className="h-7 px-2 text-[10px]"
-                      onClick={() => onResolve(item.id, "approved")}
+                      onClick={() => onDecide(item.id, "resolved")}
                     >
-                      Approve
+                      Choose
                     </Button>
+                  ) : item.kind === "exception" ? (
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={() => onDecide(item.id, "resolved")}
+                      >
+                        {item.retryAction ? "Retry" : "Escalate"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={() => onDecide(item.id, "dismissed")}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  ) : (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-7 px-2 text-[10px]"
-                      onClick={() => onResolve(item.id, "rejected")}
+                      onClick={() => onDecide(item.id, "dismissed")}
                     >
-                      Reject
+                      Dismiss
                     </Button>
-                  </>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 px-2 text-[10px]"
-                    onClick={() => onResolve(item.id, "resolved")}
-                  >
-                    Resolve
-                  </Button>
-                )}
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {/* Recent outcomes */}
+      {recentOutcomes.length > 0 ? (
+        <div className="border-t border-border/40 px-3 py-2">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.065em] text-muted-foreground">
+            Recent outcomes
+          </div>
+          <div className="space-y-1">
+            {recentOutcomes.map((outcome) => (
+              <div key={outcome.id} className="flex items-start gap-1.5">
+                <Icon
+                  name={safeIcon(outcomeIcon(outcome.result), "ArrowRight")}
+                  className="mt-0.5 size-3 shrink-0 text-muted-foreground"
+                />
+                <p className="text-[11px] leading-4 text-muted-foreground/80">
+                  {outcome.assessment.slice(0, 100)}
+                </p>
               </div>
-            </section>
-          ))}
-        </div>
-      ) : latestOutcome ? (
-        <div className="flex items-start gap-2 px-3 py-2.5">
-          <Icon
-            name={safeIcon("CheckCircle", "AlertCircle")}
-            className="mt-0.5 size-3.5 shrink-0 text-emerald-600"
-          />
-          <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-              Latest outcome
-            </div>
-            <p className="mt-0.5 text-[11px] leading-4 text-foreground/75">
-              {latestOutcome.assessment}
-            </p>
+            ))}
           </div>
         </div>
-      ) : (
-        <p className="px-3 py-2 text-[11px] text-muted-foreground">
-          No decision or exception needs your attention.
+      ) : null}
+
+      {/* Empty state */}
+      {needsYouCount === 0 && recentOutcomes.length === 0 ? (
+        <p className="px-3 py-3 text-[11px] text-muted-foreground">
+          Nothing needs your attention.
         </p>
-      )}
+      ) : null}
     </aside>
   );
 }
@@ -544,11 +621,11 @@ function CompositionTabs({
 function NativeComposition({
   workspace,
   mutate,
-  resolveRecommendation,
+  resolveAttentionItem,
 }: {
   workspace: Workspace;
   mutate(mutations: Mutation[]): void;
-  resolveRecommendation(
+  resolveAttentionItem(
     id: string,
     decision: "approved" | "rejected" | "resolved",
   ): void;
@@ -579,9 +656,9 @@ function NativeComposition({
           {node.surface === "attention" ? (
             <AttentionSummary workspace={workspace} />
           ) : (
-            <AutonomyPanel
+            <AttentionSurface
               workspace={workspace}
-              onResolve={resolveRecommendation}
+              onDecide={resolveAttentionItem}
             />
           )}
         </NativeFrame>
@@ -675,7 +752,7 @@ function WorkspaceSurface({
   workspaceId: string;
   fullWidth?: boolean;
 }) {
-  const { workspace, error, mutate, setPinned, resolveRecommendation } =
+  const { workspace, error, mutate, setPinned, resolveAttentionItem } =
     useWorkspace(workspaceId);
   const moduleSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -817,14 +894,14 @@ function WorkspaceSurface({
           <NativeComposition
             workspace={workspace}
             mutate={mutate}
-            resolveRecommendation={resolveRecommendation}
+            resolveAttentionItem={resolveAttentionItem}
           />
         ) : (
           <div className="flex min-w-0 flex-col gap-2.5">
             <AttentionSummary workspace={workspace} />
-            <AutonomyPanel
+            <AttentionSurface
               workspace={workspace}
-              onResolve={resolveRecommendation}
+              onDecide={resolveAttentionItem}
             />
             <DndContext
               sensors={moduleSensors}

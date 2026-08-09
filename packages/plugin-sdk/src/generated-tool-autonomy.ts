@@ -80,15 +80,21 @@ export type GeneratedToolAutonomyRun = {
   error?: string;
 };
 
-export type GeneratedToolRecommendation = {
+export type GeneratedAttentionItem = {
   id: string;
-  kind: "recommendation" | "exception" | "external-action";
+  kind: "action-proposal" | "decision" | "exception" | "information";
   title: string;
   rationale: string;
   evidence: string[];
-  proposedAction?: string;
+  /** action-proposal only: linked external action */
   externalActionId?: string;
-  status: "open" | "approved" | "rejected" | "resolved";
+  /** decision only: what the agent sees as viable paths */
+  options?: Array<{ id: string; label: string; description?: string }>;
+  /** exception only: what went wrong */
+  error?: string;
+  /** exception only: what retry would do differently */
+  retryAction?: string;
+  status: "open" | "approved" | "rejected" | "resolved" | "dismissed";
   createdAt: string;
   resolvedAt?: string;
 };
@@ -104,7 +110,7 @@ export type GeneratedToolAutonomyState = {
   sources: GeneratedToolSourceBinding[];
   signals: GeneratedToolSignal[];
   runs: GeneratedToolAutonomyRun[];
-  recommendations: GeneratedToolRecommendation[];
+  attentionItems: GeneratedAttentionItem[];
 };
 
 export const DEFAULT_GENERATED_TOOL_PERMISSION_MODEL: GeneratedToolPermissionModel =
@@ -161,7 +167,11 @@ The workspace is a human-facing projection of agent-maintained state, not an iso
 
 Persistent operation loop: read active goals and entity memory; consume new signals; discover/research/score opportunities; choose the highest-value safe next action; execute permitted internal work; evaluate outcomes against goal success criteria; update memory and progress; surface only attention-worthy exceptions, approvals, or high-value actions. For an external side effect, first create an idempotent action proposal, wait for approval, atomically claim the approved action before executing through a shared connector/tool, and record its outcome afterward. Never infer approval from conversation context or a general connector grant.
 
-Never bypass the permission levels. Observation does not imply mutation. Internal mutation does not imply permission to evolve the human-facing tool definition or act externally. Presentation evolution is limited to generated-tool definitions and host-safe primitives; never modify BB platform/runtime infrastructure unless explicitly asked in a development context. Preparing a draft does not authorize execution. Never perform a consequential external action (sending messages, applying, purchasing, publishing, committing on the human's behalf, or changing an external system) unless its individual proposal has explicit human approval; when execution is disabled, do not execute even after preparation. Do not ask the human to perform clerical maintenance. End with a concise run summary.`;
+Never bypass the permission levels. Observation does not imply mutation. Internal mutation does not imply permission to evolve the human-facing tool definition or act externally. Presentation evolution is limited to generated-tool definitions and host-safe primitives; never modify BB platform/runtime infrastructure unless explicitly asked in a development context. Preparing a draft does not authorize execution. Never perform a consequential external action (sending messages, applying, purchasing, publishing, committing on the human's behalf, or changing an external system) unless its individual proposal has explicit human approval; when execution is disabled, do not execute even after preparation. Do not ask the human to perform clerical maintenance.
+
+Self-adapting surface: periodically re-evaluate the generated tool's human projection. The question to ask is: "Is this surface showing the human anything they actually need to see or act on?" If a module repeatedly provides no human value (no attention items, no meaningful outcomes, no changed context), hide, replace, consolidate, or redesign it through the bounded presentation-evolution system. Never delete underlying data to simplify presentation. The human surface is for understanding, decisions, authority, exceptions, and high-value actions — not for displaying agent-internal state.
+
+End with a concise run summary.`;
 }
 
 export type GeneratedOperationsBrief = {
@@ -185,11 +195,11 @@ export type GeneratedOperationsBrief = {
   }>;
   attention: Array<{
     workspaceId: string;
-    recommendationId: string;
-    kind: GeneratedToolRecommendation["kind"];
+    itemId: string;
+    kind: GeneratedAttentionItem["kind"];
     title: string;
     rationale: string;
-    status: GeneratedToolRecommendation["status"];
+    status: GeneratedAttentionItem["status"];
   }>;
 };
 
@@ -239,12 +249,12 @@ export function buildGeneratedOperationsBrief(
       });
       changed.add(projection.workspaceId);
     }
-    for (const item of state.recommendations.filter(
+    for (const item of state.attentionItems.filter(
       (candidate) => candidate.status === "open",
     )) {
       attention.push({
         workspaceId: projection.workspaceId,
-        recommendationId: item.id,
+        itemId: item.id,
         kind: item.kind,
         title: item.title,
         rationale: item.rationale,
@@ -270,7 +280,7 @@ export type GeneratedToolCapabilityRequest =
   | { capability: "prepare-external-action" }
   | {
       capability: "execute-consequential-action";
-      proposalStatus: GeneratedToolRecommendation["status"];
+      proposalStatus: GeneratedAttentionItem["status"];
     };
 
 /** Central policy decision used by connector/action adapters before side effects. */
