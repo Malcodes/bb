@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import {
   definePluginApp,
   useRealtime,
@@ -8,11 +16,33 @@ import {
   type PluginNavPanelProps,
   type PluginSidebarNavItemsProviderProps,
 } from "@bb/plugin-sdk/app";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@bb/shared-ui/button";
 import { Icon } from "@bb/shared-ui/icon";
-import { applyMutation, type Mutation, type Workspace } from "./src/model.js";
+import {
+  applyMutation,
+  type Mutation,
+  type View,
+  type Workspace,
+} from "./src/model.js";
 import { ViewRenderer } from "./src/views.js";
 import { safeIcon } from "./src/generated-app.js";
+import { deriveAttentionSummary } from "./src/orchestration.js";
 import type { salesRpcContract } from "./server.js";
 
 function useWorkspace(workspaceId: string) {
@@ -91,6 +121,133 @@ function useWorkspace(workspaceId: string) {
   return { workspace, error, mutate, setPinned };
 }
 
+const MODULE_MIN_HEIGHT = 280;
+const MODULE_MAX_HEIGHT = 720;
+
+function AttentionSummary({ workspace }: { workspace: Workspace }) {
+  return (
+    <aside
+      className="flex items-start gap-2.5 rounded-md border border-amber-500/15 bg-amber-500/[0.055] px-3 py-2.5"
+      aria-label="Attention summary"
+    >
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+        <Icon name="AlertCircle" className="size-3.5" />
+      </span>
+      <div className="min-w-0">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.065em] text-amber-800/80 dark:text-amber-200/80">
+          Attention
+        </div>
+        <p className="mt-0.5 text-xs leading-[1.45] text-foreground/80">
+          {deriveAttentionSummary(workspace)}
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+function WorkspaceModule({
+  view,
+  children,
+  onResize,
+}: {
+  view: View;
+  children: ReactNode;
+  onResize(height?: number): void;
+}) {
+  const sortable = useSortable({ id: view.id });
+  const [draftHeight, setDraftHeight] = useState<number | undefined>(
+    view.layout?.height,
+  );
+  const draftRef = useRef(draftHeight);
+  useEffect(() => {
+    setDraftHeight(view.layout?.height);
+    draftRef.current = view.layout?.height;
+  }, [view.layout?.height]);
+  const style = {
+    transform: CSS.Translate.toString(sortable.transform),
+    transition: sortable.transition,
+    height: draftHeight,
+    zIndex: sortable.isDragging ? 20 : undefined,
+    opacity: sortable.isDragging ? 0.72 : undefined,
+  };
+  const resizable = view.primitive !== "metrics";
+
+  const beginResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startY = event.clientY;
+    const module = event.currentTarget.closest<HTMLElement>(
+      "[data-workspace-module]",
+    );
+    const startHeight = module?.getBoundingClientRect().height ?? 360;
+    const move = (pointer: PointerEvent) => {
+      const next = Math.max(
+        MODULE_MIN_HEIGHT,
+        Math.min(
+          MODULE_MAX_HEIGHT,
+          Math.round(startHeight + pointer.clientY - startY),
+        ),
+      );
+      draftRef.current = next;
+      setDraftHeight(next);
+    };
+    const end = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", end);
+      window.removeEventListener("pointercancel", end);
+      if (draftRef.current !== view.layout?.height) onResize(draftRef.current);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end, { once: true });
+    window.addEventListener("pointercancel", end, { once: true });
+  };
+
+  return (
+    <section
+      ref={sortable.setNodeRef}
+      style={style}
+      data-workspace-module={view.id}
+      className="relative flex min-h-0 min-w-0 flex-col rounded-lg border border-border/75 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)]"
+    >
+      <header className="flex h-8 shrink-0 items-center gap-2 border-b border-border/60 px-2.5">
+        <button
+          ref={sortable.setActivatorNodeRef}
+          type="button"
+          {...sortable.attributes}
+          {...sortable.listeners}
+          className="flex size-5 cursor-grab items-center justify-center rounded text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground active:cursor-grabbing"
+          aria-label={`Reorder ${view.title} module`}
+        >
+          <Icon name="DragDropVertical" className="size-3.5" />
+        </button>
+        <span className="truncate text-[11px] font-semibold text-foreground/75">
+          {view.title}
+        </span>
+        {view.layout?.height ? (
+          <button
+            type="button"
+            onClick={() => onResize(undefined)}
+            className="ml-auto text-[10px] text-muted-foreground hover:text-foreground"
+          >
+            Fit content
+          </button>
+        ) : null}
+      </header>
+      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      {resizable ? (
+        <button
+          type="button"
+          onPointerDown={beginResize}
+          className="absolute inset-x-0 bottom-0 z-10 h-2 cursor-row-resize touch-none opacity-0 transition-opacity hover:opacity-100 focus:opacity-100"
+          aria-label={`Resize ${view.title} module vertically`}
+        >
+          <span className="mx-auto block h-px w-10 bg-border" />
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
 function WorkspaceSurface({
   workspaceId,
   fullWidth = false,
@@ -99,6 +256,12 @@ function WorkspaceSurface({
   fullWidth?: boolean;
 }) {
   const { workspace, error, mutate, setPinned } = useWorkspace(workspaceId);
+  const moduleSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
   if (error && !workspace) {
     return (
       <div
@@ -129,6 +292,26 @@ function WorkspaceSurface({
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(workspace.updatedAt));
+  const visibleViews = workspace.views.filter((view) => view.visible !== false);
+  const handleModuleDragEnd = (event: DragEndEvent) => {
+    if (!event.over || event.active.id === event.over.id) return;
+    const from = workspace.views.findIndex(
+      (view) => view.id === event.active.id,
+    );
+    const to = workspace.views.findIndex((view) => view.id === event.over?.id);
+    if (from < 0 || to < 0) return;
+    const reordered = [...workspace.views];
+    const [moved] = reordered.splice(from, 1);
+    if (!moved) return;
+    reordered.splice(to, 0, moved);
+    mutate([
+      {
+        op: "reorderViews",
+        workspaceId: workspace.id,
+        viewIds: reordered.map((view) => view.id),
+      },
+    ]);
+  };
   return (
     <section
       className={
@@ -209,17 +392,43 @@ function WorkspaceSurface({
             : "overflow-x-auto p-3"
         }
       >
-        <div className="flex min-w-0 flex-col gap-3">
-          {workspace.views
-            .filter((view) => view.visible !== false)
-            .map((view) => (
-              <ViewRenderer
-                key={view.id}
-                view={view}
-                workspace={workspace}
-                mutate={mutate}
-              />
-            ))}
+        <div className="flex min-w-0 flex-col gap-2.5">
+          <AttentionSummary workspace={workspace} />
+          <DndContext
+            sensors={moduleSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleModuleDragEnd}
+          >
+            <SortableContext
+              items={visibleViews.map((view) => view.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex min-w-0 flex-col gap-2.5">
+                {visibleViews.map((view) => (
+                  <WorkspaceModule
+                    key={view.id}
+                    view={view}
+                    onResize={(height) =>
+                      mutate([
+                        {
+                          op: "setViewLayout",
+                          workspaceId: workspace.id,
+                          viewId: view.id,
+                          height,
+                        },
+                      ])
+                    }
+                  >
+                    <ViewRenderer
+                      view={view}
+                      workspace={workspace}
+                      mutate={mutate}
+                    />
+                  </WorkspaceModule>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     </section>

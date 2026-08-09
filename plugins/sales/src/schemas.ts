@@ -192,6 +192,10 @@ export const viewSchema = z.object({
   ]),
   title: z.string().min(1),
   visible: z.boolean().optional(),
+  layout: z
+    .object({ height: z.number().int().min(280).max(720).optional() })
+    .strict()
+    .optional(),
   collectionId: z.string().optional(),
   config: viewConfigSchema,
 });
@@ -267,6 +271,14 @@ export const mutationSchema = z.discriminatedUnion("op", [
       op: z.literal("removeView"),
       workspaceId: z.string().min(1),
       viewId: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setViewLayout"),
+      workspaceId: z.string().min(1),
+      viewId: z.string().min(1),
+      height: z.number().min(280).max(720).optional(),
     })
     .strict(),
   z

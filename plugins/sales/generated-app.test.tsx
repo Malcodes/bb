@@ -133,16 +133,24 @@ describe("native generated-app vocabulary", () => {
       />,
     );
     expect(screen.getByPlaceholderText("Search prospects…")).toBeDefined();
-    expect(screen.getByText("Token Company")).toBeDefined();
+    const company = screen.getByText("Token Company");
+    expect(company).toBeDefined();
+    const draggableCard = company.closest('[role="button"]');
+    expect(draggableCard).toBeTruthy();
+    expect(draggableCard?.className).toContain("cursor-grab");
+    fireEvent.click(draggableCard!);
+    expect(screen.getByRole("dialog")).toBeDefined();
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.getByText("Founding AE")).toBeDefined();
     expect(screen.getAllByText("High").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("button", { name: "Add card to Contacted" }),
     ).toBeDefined();
+    expect(screen.getByText("Closed")).toBeDefined();
     const lane = screen.getByText("Contacted").closest("section");
     expect(lane?.className).toContain("min-h-36");
     expect(lane?.className).toContain("self-start");
-    expect(lane?.className).toContain("max-h-[min(54vh,500px)]");
+    expect(lane?.className).toContain("max-h-[min(54vh,500px,100%)]");
     expect(lane?.className).not.toContain("flex-1");
   });
 });

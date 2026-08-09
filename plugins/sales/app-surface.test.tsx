@@ -159,9 +159,11 @@ it("updates inline and pinned surfaces immediately when an agent hides or remove
 
   await waitFor(() => {
     expect(
-      within(inline.container).getByText("All Opportunities"),
+      within(inline.container).getAllByText("All Opportunities")[0],
     ).toBeDefined();
-    expect(within(application.container).getByText("Activity")).toBeDefined();
+    expect(
+      within(application.container).getAllByText("Activity")[0],
+    ).toBeDefined();
   });
 
   current = {

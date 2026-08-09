@@ -134,12 +134,19 @@ export type ViewConfig = {
   presentation?: KanbanPresentation;
 };
 
+export type ViewLayout = {
+  /** Persisted module height in CSS pixels. Omit for content-sized. */
+  height?: number;
+};
+
 export type View = {
   id: string;
   primitive: "kanban" | "table" | "cards" | "list" | "timeline" | "metrics";
   title: string;
   /** Presentation visibility only; hidden views keep collections and history. */
   visible?: boolean;
+  /** Human-controlled module layout; independent from underlying data. */
+  layout?: ViewLayout;
   /** Collection this view projects; metrics views may omit it. */
   collectionId?: string;
   config: ViewConfig;
@@ -193,6 +200,12 @@ export type Mutation =
       visible: boolean;
     }
   | { op: "removeView"; workspaceId: string; viewId: string }
+  | {
+      op: "setViewLayout";
+      workspaceId: string;
+      viewId: string;
+      height?: number;
+    }
   | { op: "renameWorkspace"; workspaceId: string; title: string };
 
 /**
@@ -349,6 +362,18 @@ export function applyMutation(ws: Workspace, m: Mutation): boolean {
     const index = ws.views.findIndex((candidate) => candidate.id === m.viewId);
     if (index === -1) return false;
     ws.views.splice(index, 1);
+    return true;
+  }
+  if (m.op === "setViewLayout") {
+    if (m.workspaceId !== ws.id) return false;
+    const view = ws.views.find((candidate) => candidate.id === m.viewId);
+    if (!view) return false;
+    const height =
+      m.height === undefined
+        ? undefined
+        : Math.max(280, Math.min(720, Math.round(m.height)));
+    if (view.layout?.height === height) return false;
+    view.layout = height === undefined ? undefined : { ...view.layout, height };
     return true;
   }
   if (m.workspaceId !== ws.id) return false;

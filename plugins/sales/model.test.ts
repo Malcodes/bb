@@ -132,6 +132,37 @@ describe("applyMutation", () => {
     ).toBe(false);
   });
 
+  it("persists bounded module height without changing view data", () => {
+    const ws = sample();
+    const configBefore = structuredClone(ws.views[0]!.config);
+    expect(
+      applyMutation(ws, {
+        op: "setViewLayout",
+        workspaceId: "ws1",
+        viewId: "v1",
+        height: 480,
+      }),
+    ).toBe(true);
+    expect(ws.views[0]!.layout).toEqual({ height: 480 });
+    expect(ws.views[0]!.config).toEqual(configBefore);
+
+    applyMutation(ws, {
+      op: "setViewLayout",
+      workspaceId: "ws1",
+      viewId: "v1",
+      height: 999,
+    });
+    expect(ws.views[0]!.layout?.height).toBe(720);
+    applyMutation(ws, {
+      op: "setViewLayout",
+      workspaceId: "ws1",
+      viewId: "v1",
+      height: 100,
+    });
+    expect(ws.views[0]!.layout?.height).toBe(280);
+    expect(ws.collections[0]!.rows).toHaveLength(2);
+  });
+
   it("hides and removes views without deleting underlying collection data", () => {
     const ws = sample();
     ws.views.push(

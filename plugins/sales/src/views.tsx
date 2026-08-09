@@ -2,16 +2,19 @@
  * Interactive view renderers. Each view is a projection of a collection; user
  * interactions emit Mutations (the same ones the agent's tools emit).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  closestCenter,
   DndContext,
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
+  pointerWithin,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -49,8 +52,14 @@ import {
   safeIcon,
   valueText,
 } from "./generated-app.js";
+import { isTerminalStage, resolveKanbanLanes } from "./orchestration.js";
 
 export type Mutate = (mutations: Mutation[]) => void;
+
+const laneCollisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  return pointerHits.length > 0 ? pointerHits : closestCenter(args);
+};
 
 function str(v: RowValue | undefined): string {
   return v == null ? "" : String(v);
@@ -153,9 +162,19 @@ function KanbanCardContent({
   const fallback = valueText(row[avatar?.fallbackField ?? titleField]);
   const image = avatar?.imageField ? valueText(row[avatar.imageField]) : "";
   const metadata = card?.metadata ?? [];
-  const badges =
+  const configuredBadges =
     card?.badges ??
     (view.config.flagField ? [{ field: view.config.flagField }] : []);
+  const stageField = view.config.groupBy ?? "stage";
+  const outcomeField = collection.fields.find((field) =>
+    /^(outcome|result|closeReason|resolution)$/i.test(field),
+  );
+  const badges =
+    outcomeField &&
+    isTerminalStage(valueText(row[stageField])) &&
+    !configuredBadges.some((badge) => badge.field === outcomeField)
+      ? [...configuredBadges, { field: outcomeField }]
+      : configuredBadges;
   return (
     <>
       {eyebrow ? (
@@ -234,6 +253,18 @@ function KanbanCard({
   onOpen(): void;
 }) {
   const drag = useDraggable({ id: row.id });
+  const draggedRef = useRef(false);
+  useEffect(() => {
+    if (drag.isDragging) {
+      draggedRef.current = true;
+      return;
+    }
+    if (!draggedRef.current) return;
+    const clear = window.setTimeout(() => {
+      draggedRef.current = false;
+    }, 180);
+    return () => window.clearTimeout(clear);
+  }, [drag.isDragging]);
   return (
     <Card
       ref={drag.setNodeRef}
@@ -242,19 +273,23 @@ function KanbanCard({
           ? `translate3d(${drag.transform.x}px, ${drag.transform.y}px, 0)`
           : undefined,
       }}
-      onClick={onOpen}
-      className={`group relative rounded-md border-border/80 bg-card px-2.5 py-2 shadow-[0_1px_2px_hsl(var(--foreground)/0.035)] transition-[border-color,box-shadow,opacity] duration-150 hover:border-border hover:shadow-[0_3px_10px_hsl(var(--foreground)/0.07)] focus-within:ring-2 focus-within:ring-ring/30 ${drag.isDragging ? "opacity-25" : ""}`}
+      {...drag.listeners}
+      {...drag.attributes}
+      onClick={(event) => {
+        if (draggedRef.current) {
+          event.preventDefault();
+          return;
+        }
+        onOpen();
+      }}
+      className={`group relative cursor-grab rounded-md active:cursor-grabbing border-border/80 bg-card px-2.5 py-2 shadow-[0_1px_2px_hsl(var(--foreground)/0.035)] transition-[border-color,box-shadow,opacity] duration-150 hover:border-border hover:shadow-[0_3px_10px_hsl(var(--foreground)/0.07)] focus-within:ring-2 focus-within:ring-ring/30 ${drag.isDragging ? "opacity-25" : ""}`}
     >
-      <button
-        type="button"
-        aria-label="Drag card"
-        {...drag.listeners}
-        {...drag.attributes}
-        onClick={(event) => event.stopPropagation()}
-        className="absolute right-1.5 top-1.5 flex size-6 cursor-grab items-center justify-center rounded opacity-0 text-muted-foreground transition-opacity hover:bg-muted group-hover:opacity-100 focus:opacity-100 active:cursor-grabbing"
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-1.5 top-1.5 flex size-6 items-center justify-center rounded opacity-0 text-muted-foreground transition-opacity group-hover:opacity-100"
       >
         <Icon name="DragDropVertical" className="size-3.5" />
-      </button>
+      </span>
       <KanbanCardContent row={row} collection={collection} view={view} />
     </Card>
   );
@@ -291,7 +326,7 @@ function KanbanLane({
   return (
     <section
       ref={drop.setNodeRef}
-      className={`flex min-h-36 max-h-[min(54vh,500px)] w-[252px] min-w-[252px] flex-col self-start rounded-lg border border-transparent bg-muted/35 transition-[background-color,border-color] duration-150 ${drop.isOver ? "border-primary/25 bg-primary/[0.045]" : ""}`}
+      className={`flex min-h-36 max-h-[min(54vh,500px,100%)] w-[252px] min-w-[252px] flex-col self-start rounded-lg border border-transparent bg-muted/35 transition-[background-color,border-color] duration-150 ${drop.isOver ? "border-primary/25 bg-primary/[0.045]" : ""}`}
     >
       <header className="sticky top-0 z-10 flex h-9 shrink-0 items-center gap-1.5 rounded-t-lg bg-muted/90 px-2.5 supports-[backdrop-filter]:backdrop-blur-sm">
         <span className={`size-1.5 rounded-full ${toneClass}`} />
@@ -439,14 +474,10 @@ function KanbanView({
     presentation?.card?.titleField ?? config.titleField,
     ["company", "name", "title", "account"],
   );
-  const lanes = useMemo(() => {
-    const explicit = config.lanes ?? [];
-    const seen = new Set(explicit);
-    const rest = collection.rows
-      .map((row) => valueText(row[groupBy]))
-      .filter((value) => value && !seen.has(value));
-    return [...explicit, ...Array.from(new Set(rest))];
-  }, [config.lanes, collection.rows, groupBy]);
+  const lanes = useMemo(
+    () => resolveKanbanLanes(view, collection, groupBy),
+    [collection, groupBy, view],
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor),
@@ -534,7 +565,7 @@ function KanbanView({
   });
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)]">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_hsl(var(--foreground)/0.025)]">
       <GeneratedAppToolbar
         query={query}
         onQueryChange={setQuery}
@@ -548,11 +579,12 @@ function KanbanView({
       />
       <DndContext
         sensors={sensors}
+        collisionDetection={laneCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="flex items-start gap-2.5 overflow-x-auto bg-muted/10 p-2.5">
+        <div className="flex min-h-0 flex-1 items-start gap-2.5 overflow-x-auto bg-muted/10 p-2.5">
           {lanes.map((lane) => (
             <KanbanLane
               key={lane}
