@@ -15,3 +15,4 @@ export * from "./generated-tool-autonomy.js";
 export * from "./google-work-adapters.js";
 export type * from "./json-value.js";
 export * from "./rpc-contract.js";
+export * from "./selfops.js";

@@ -401,6 +401,7 @@ const autonomyStateSchema = z.object({
   signals: z.array(autonomySignalSchema),
   runs: z.array(autonomyRunSchema),
   attentionItems: z.array(attentionItemSchema),
+  zeroValueSurfaceCycles: z.number().int().nonnegative().optional(),
 });
 
 export const nativeCompositionNodeSchema: z.ZodType<

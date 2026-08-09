@@ -2954,6 +2954,9 @@ importers:
 
   plugins/selfops:
     dependencies:
+      '@bb/shared-ui':
+        specifier: workspace:*
+        version: link:../../packages/shared-ui
       zod:
         specifier: 4.3.6
         version: 4.3.6

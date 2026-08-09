@@ -61,6 +61,15 @@ export interface LoopHooks {
   }): Promise<{ baseline: CandidateRun[]; candidate: CandidateRun[] }>;
   /** Apply an autonomous-safe change. Returns a human-readable receipt. */
   applyAutonomousFix(proposal: ImprovementProposal): Promise<string>;
+  /**
+   * Capture the value an autonomous change replaces, for the audit record and
+   * rollback. Returns undefined when nothing pre-exists.
+   */
+  capturePriorValue?(
+    proposal: ImprovementProposal,
+  ): Promise<string | undefined>;
+  /** Revert an autonomous change to its captured prior value. */
+  rollbackAutonomousFix?(proposal: ImprovementProposal): Promise<string>;
   /** Held-out task registry, keyed by change kind. */
   heldOutTasks(changeKind: string): HeldOutTask[];
   now(): string;
@@ -142,6 +151,13 @@ export async function runSelfOpsLoop(
     if (proposal.safety === "autonomous-safe") {
       // Maintainer routine repair: apply, then verify on the next observation
       // pass (failure recurs → diagnosis reopens with new evidence).
+      // Auditable before/after: capture what this change replaces before
+      // applying, so the proposal record is itself the rollback path.
+      const prior = hooks.capturePriorValue
+        ? await hooks.capturePriorValue(proposal)
+        : undefined;
+      if (prior !== undefined) proposal.change.payload.priorValue = prior;
+      proposal.change.payload.appliedAt = now;
       const receipt = await hooks.applyAutonomousFix(proposal);
       proposal.status = "adopted";
       autoFixed.push({ proposalId: proposal.id, receipt });
@@ -200,4 +216,27 @@ export async function runSelfOpsLoop(
     tested,
     escalated,
   };
+}
+
+/** Roll back an adopted autonomous-safe change to its captured prior value. */
+export async function rollbackAutonomousChange(
+  state: SelfOpsState,
+  proposalId: string,
+  hooks: LoopHooks,
+): Promise<ImprovementProposal> {
+  const proposal = state.proposals.find((p) => p.id === proposalId);
+  if (!proposal) throw new Error(`proposal not found: ${proposalId}`);
+  if (proposal.safety !== "autonomous-safe") {
+    throw new Error("only autonomous-safe changes carry a rollback path");
+  }
+  if (proposal.status !== "adopted") {
+    throw new Error(`cannot roll back proposal in status ${proposal.status}`);
+  }
+  if (!hooks.rollbackAutonomousFix) {
+    throw new Error("no rollback applier is registered");
+  }
+  await hooks.rollbackAutonomousFix(proposal);
+  proposal.status = "reverted";
+  proposal.change.payload.revertedAt = hooks.now();
+  return proposal;
 }

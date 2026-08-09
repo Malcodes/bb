@@ -13,7 +13,8 @@
     "branding": {
       "icon": "Toolbox"
     },
-    "server": "./server.ts"
+    "server": "./server.ts",
+    "app": "./app.tsx"
   },
   "keywords": [
     "bb-plugin",
@@ -25,7 +26,8 @@
     "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@bb/shared-ui": "workspace:*"
   },
   "devDependencies": {
     "@bb/plugin-sdk": "workspace:*",

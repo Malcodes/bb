@@ -26,6 +26,7 @@ import type { ServerRuntimeConfig } from "./types.js";
 import { NotificationHub } from "./ws/hub.js";
 import { WatchInterestCoordinator } from "./ws/watch-interests.js";
 import { HostSharedPortCoordinator } from "./ws/host-shared-ports.js";
+import { startSelfOpsCollector } from "./services/selfops/collector.js";
 
 export async function runServer(serverConfig: ServerConfig): Promise<void> {
   const logger = createLogger({
@@ -191,6 +192,12 @@ export async function runServer(serverConfig: ServerConfig): Promise<void> {
   }, 10_000);
   sweepInterval.unref();
 
+  const selfOpsCollector = startSelfOpsCollector({
+    db,
+    plugins: pluginService,
+    logger,
+  });
+
   let shutdownPromise: Promise<void> | null = null;
   const runShutdown = (): Promise<void> => {
     if (shutdownPromise) {
@@ -199,6 +206,7 @@ export async function runServer(serverConfig: ServerConfig): Promise<void> {
     shutdownPromise = (async () => {
       eventLoopStallMonitor.stop();
       clearInterval(sweepInterval);
+      selfOpsCollector.stop();
       await pluginService.stop().catch((error: unknown) => {
         logger.warn({ err: error }, "Plugin shutdown failed");
       });

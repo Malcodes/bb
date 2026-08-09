@@ -33,6 +33,35 @@ import { workspaceDirective } from "./src/workspace-directive.js";
 import { GoogleApiWorkTransport } from "./src/google-api-transport.js";
 
 const WORKSPACES_KEY = "workspaces";
+const SELFOPS_PLUGIN_ID = "selfops";
+
+/** Feed a native-telemetry observation into the selfops layer, best-effort. */
+async function emitSelfOpsObservation(
+  bb: BbPluginApi,
+  observation: {
+    id: string;
+    kind: string;
+    observedAt: string;
+    subject: string;
+    attributes: Record<string, string | number | boolean>;
+  },
+): Promise<void> {
+  try {
+    await bb.sdk.plugins.callRpc({
+      pluginId: SELFOPS_PLUGIN_ID,
+      method: "ingestObservations",
+      input: { observations: [observation] },
+      outputSchema: z.object({
+        ingested: z.number(),
+        diagnoses: z.number(),
+        autoFixed: z.number(),
+        escalated: z.number(),
+      }),
+    });
+  } catch {
+    // selfops absent or not running; telemetry emission must never block work.
+  }
+}
 const OPERATIONS_SIGNALS_KEY = "generated-operations-signals";
 const SIGNAL_CHANNEL = "workspaces-changed";
 const GOOGLE_CURSOR_KEY = "google-work-cursor";
@@ -701,6 +730,30 @@ export default async function plugin(
             signal.reconciledAt ??= reconciledAt;
           }
         } else run.error = detail ?? "Operator cycle failed.";
+        // SelfOps surface-value telemetry: a completed cycle with no open
+        // attention items is a zero-value cycle for the human surface.
+        if (workspace.autonomy) {
+          const state = workspace.autonomy;
+          const openItems = state.attentionItems.filter(
+            (candidate) => candidate.status === "open",
+          ).length;
+          state.zeroValueSurfaceCycles =
+            openItems === 0 && status === "completed"
+              ? (state.zeroValueSurfaceCycles ?? 0) + 1
+              : 0;
+          if (status === "completed") {
+            void emitSelfOpsObservation(bb, {
+              id: `surf-${workspace.id}-${state.zeroValueSurfaceCycles}`,
+              kind: "surface-usage",
+              observedAt: new Date().toISOString(),
+              subject: `surface:${workspace.id}`,
+              attributes: {
+                zeroValueCycles: state.zeroValueSurfaceCycles,
+                openAttention: openItems,
+              },
+            });
+          }
+        }
         workspace.revision += 1;
         workspace.updatedAt = new Date().toISOString();
         changedWorkspace = workspace.id;
@@ -1336,6 +1389,17 @@ export default async function plugin(
             action.completedAt = new Date().toISOString();
             action.outcome = input.outcome;
             action.lastError = input.error;
+            void emitSelfOpsObservation(bb, {
+              id: `outcome-${workspace.id}-${action.id}`,
+              kind: "test-result",
+              observedAt: new Date().toISOString(),
+              subject: `surface:${workspace.id}`,
+              attributes: {
+                result: input.result,
+                succeeded: input.succeeded ? 1 : 0,
+                actionType: action.actionType,
+              },
+            });
             state.outcomes.unshift({
               id: newId("outcome"),
               goalId: input.goalId,
@@ -1642,6 +1706,19 @@ export default async function plugin(
       );
     },
     async resolveAttentionItem({ workspaceId, itemId, decision }) {
+      const workspaceBefore = await getWorkspace(workspaceId);
+      const itemBefore = autonomy(workspaceBefore).attentionItems.find(
+        (candidate) => candidate.id === itemId,
+      );
+      if (itemBefore) {
+        void emitSelfOpsObservation(bb, {
+          id: `attn-${workspaceId}-${itemId}-${decision}`,
+          kind: "approval-decision",
+          observedAt: new Date().toISOString(),
+          subject: `surface:${workspaceId}`,
+          attributes: { itemId, itemKind: itemBefore.kind, decision },
+        });
+      }
       return toJson(
         await updateWorkspace(workspaceId, (workspace) => {
           const item = autonomy(workspace).attentionItems.find(

@@ -111,6 +111,11 @@ export type GeneratedToolAutonomyState = {
   signals: GeneratedToolSignal[];
   runs: GeneratedToolAutonomyRun[];
   attentionItems: GeneratedAttentionItem[];
+  /**
+   * Consecutive completed cycles that produced no attention items and no human
+   * interaction — SelfOps surface-value telemetry. Optional; server increments.
+   */
+  zeroValueSurfaceCycles?: number;
 };
 
 export const DEFAULT_GENERATED_TOOL_PERMISSION_MODEL: GeneratedToolPermissionModel =

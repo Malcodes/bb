@@ -2,14 +2,16 @@ import { z } from "zod";
 import { defineRpcContract, type BbPluginApi } from "@bb/plugin-sdk";
 import {
   emptySelfOpsState,
+  rollbackAutonomousChange,
   runSelfOpsLoop,
   type LoopHooks,
   type SelfOpsState,
 } from "./src/loop.js";
-import type {
-  CandidateRun,
-  HeldOutTask,
-  SystemObservation,
+import {
+  heldOutTasksFromHistory,
+  type CandidateRun,
+  type HeldOutTask,
+  type SystemObservation,
 } from "./src/model.js";
 
 const STATE_KEY = "selfops-state";
@@ -39,6 +41,19 @@ const observationSchema = z
   .strict();
 
 export const selfopsRpcContract = defineRpcContract({
+  ingestObservations: {
+    input: z
+      .object({ observations: z.array(observationSchema).min(1).max(500) })
+      .strict(),
+    output: z
+      .object({
+        ingested: z.number(),
+        diagnoses: z.number(),
+        autoFixed: z.number(),
+        escalated: z.number(),
+      })
+      .strict(),
+  },
   readBrief: {
     input: z.object({}).strict(),
     output: z
@@ -48,6 +63,27 @@ export const selfopsRpcContract = defineRpcContract({
         revertedChanges: z.number(),
         autoFixed: z.number(),
         recentExperiments: z.array(z.string()),
+        /**
+         * Hidden-by-default BB-wide status: only the four surfacing
+         * categories — material failures, approval-needed improvements,
+         * meaningful adopted improvements, significant regressions.
+         */
+        notices: z.array(
+          z
+            .object({
+              id: z.string(),
+              category: z.enum([
+                "material-failure",
+                "approval-required",
+                "adopted-improvement",
+                "regression",
+              ]),
+              title: z.string(),
+              detail: z.string(),
+              attentionId: z.string().optional(),
+            })
+            .strict(),
+        ),
         attention: z.array(
           z
             .object({
@@ -149,7 +185,12 @@ export default async function plugin(
 
   const hooks: LoopHooks = {
     now,
-    heldOutTasks: options.hooks?.heldOutTasks ?? defaultHeldOutTasks,
+    // Actual historical workloads first (live state at experiment time);
+    // the canonical replay set is the fallback; empty means "do not adopt".
+    heldOutTasks: (changeKind) =>
+      heldOutTasksFromHistory(changeKind, currentEvidence).length > 0
+        ? heldOutTasksFromHistory(changeKind, currentEvidence)
+        : (options.hooks?.heldOutTasks ?? defaultHeldOutTasks)(changeKind),
     runExperiment:
       options.hooks?.runExperiment ??
       (async ({ proposal, heldOut }) => {
@@ -175,10 +216,35 @@ export default async function plugin(
     applyAutonomousFix:
       options.hooks?.applyAutonomousFix ??
       (async (proposal) => {
+        await bb.storage.kv.set(
+          `selfops:applied:${proposal.change.payload.subject}`,
+          proposal.change.payload,
+        );
         bb.log.info(
           `selfops autonomous fix: ${proposal.title} (${JSON.stringify(proposal.change.payload)})`,
         );
         return `applied ${proposal.change.kind} to ${proposal.change.payload.subject}`;
+      }),
+    capturePriorValue:
+      options.hooks?.capturePriorValue ??
+      (async (proposal) => {
+        const prior = await bb.storage.kv.get<Record<string, string>>(
+          `selfops:applied:${proposal.change.payload.subject}`,
+        );
+        return prior ? JSON.stringify(prior) : undefined;
+      }),
+    rollbackAutonomousFix:
+      options.hooks?.rollbackAutonomousFix ??
+      (async (proposal) => {
+        const key = `selfops:applied:${proposal.change.payload.subject}`;
+        const prior = proposal.change.payload.priorValue;
+        if (prior !== undefined) {
+          await bb.storage.kv.set(key, JSON.parse(prior));
+        } else {
+          await bb.storage.kv.delete(key);
+        }
+        bb.log.info(`selfops rollback: ${proposal.title}`);
+        return `reverted ${proposal.change.kind} on ${proposal.change.payload.subject}`;
       }),
   };
 
@@ -200,7 +266,15 @@ export default async function plugin(
 
   async function runLoop(): Promise<void> {
     const evidence = await collectEvidence();
+    await ingest(evidence);
+  }
+
+  let currentEvidence: SystemObservation[] = [];
+  async function ingest(
+    evidence: SystemObservation[],
+  ): Promise<{ diagnoses: number; autoFixed: number; escalated: number }> {
     const state = await loadState();
+    currentEvidence = [...state.observations, ...evidence];
     const outcome = await runSelfOpsLoop(state, evidence, hooks);
     if (
       outcome.newDiagnoses.length > 0 ||
@@ -213,6 +287,11 @@ export default async function plugin(
     }
     await saveState(outcome.state);
     bb.realtime.publish("selfops-changed", { at: Date.now() });
+    return {
+      diagnoses: outcome.newDiagnoses.length,
+      autoFixed: outcome.autoFixed.length,
+      escalated: outcome.escalated.length,
+    };
   }
 
   bb.background.schedule("selfops-loop", "*/10 * * * *", runLoop);
@@ -305,9 +384,101 @@ export default async function plugin(
     instructions: `BB self-maintenance (selfops) is active. Contribute operational evidence via selfops_observe when you encounter errors, failed runs, redundant tool calls, oversized context, expensive-model trivial work, low-value surfaces, or human corrections. The loop diagnoses, autonomously repairs only routine safe failures, tests bounded changes against held-out tasks before adopting, and escalates trust-boundary changes for explicit approval. Optimize for human capability amplification and goal attainment — never merely fewer tokens or more automation.`,
   }));
 
+  bb.agents.registerTool({
+    name: "selfops_rollback_change",
+    description:
+      "Roll back an adopted autonomous-safe change to its audited prior value.",
+    parameters: z.object({ proposalId: z.string().min(1) }).strict(),
+    async execute(input) {
+      const state = await loadState();
+      const proposal = await rollbackAutonomousChange(
+        state,
+        input.proposalId,
+        hooks,
+      );
+      await saveState(state);
+      bb.realtime.publish("selfops-changed", { at: Date.now() });
+      return JSON.stringify({
+        id: proposal.id,
+        status: proposal.status,
+        priorValue: proposal.change.payload.priorValue ?? null,
+      });
+    },
+  });
+
   bb.rpc.register(selfopsRpcContract, {
+    async ingestObservations({ observations }) {
+      const result = await ingest(observations as SystemObservation[]);
+      return {
+        ingested: observations.length,
+        diagnoses: result.diagnoses,
+        autoFixed: result.autoFixed,
+        escalated: result.escalated,
+      };
+    },
     async readBrief() {
       const state = await loadState();
+      const dayAgo = Date.now() - 24 * 60 * 60_000;
+      const notices: Array<{
+        id: string;
+        category:
+          | "material-failure"
+          | "approval-required"
+          | "adopted-improvement"
+          | "regression";
+        title: string;
+        detail: string;
+        attentionId?: string;
+      }> = [];
+      for (const item of state.attention) {
+        if (item.status !== "open") continue;
+        if (item.kind === "approval-required") {
+          notices.push({
+            id: `notice-${item.id}`,
+            category: "approval-required",
+            title: item.title,
+            detail: item.rationale,
+            attentionId: item.id,
+          });
+        } else if (item.kind === "escalation") {
+          notices.push({
+            id: `notice-${item.id}`,
+            category: "material-failure",
+            title: item.title,
+            detail: item.rationale,
+            attentionId: item.id,
+          });
+        }
+      }
+      for (const experiment of state.experiments) {
+        if (Date.parse(experiment.testedAt) < dayAgo) continue;
+        if (experiment.adopted) {
+          const proposal = state.proposals.find(
+            (p) => p.id === experiment.proposalId,
+          );
+          notices.push({
+            id: `notice-${experiment.id}`,
+            category: "adopted-improvement",
+            title: proposal?.title ?? "Improvement adopted",
+            detail: experiment.summary,
+          });
+        }
+      }
+      for (const diagnosis of state.diagnoses) {
+        if (Date.parse(diagnosis.diagnosedAt) < dayAgo) continue;
+        if (
+          diagnosis.class === "latency-regression" ||
+          (diagnosis.class === "expensive-model-for-trivial-task" &&
+            diagnosis.confidence >= 0.9)
+        ) {
+          notices.push({
+            id: `notice-${diagnosis.id}`,
+            category: "regression",
+            title: diagnosis.summary,
+            detail: diagnosis.evidence.join(", ").slice(0, 300),
+          });
+        }
+      }
       return {
         openAttention: state.attention.filter((a) => a.status === "open")
           .length,
@@ -319,6 +490,7 @@ export default async function plugin(
           (p) => p.status === "adopted" && p.safety === "autonomous-safe",
         ).length,
         recentExperiments: state.experiments.slice(0, 10).map((e) => e.summary),
+        notices,
         attention: state.attention
           .filter((a) => a.status === "open")
           .map((a) => ({
