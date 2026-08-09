@@ -55,6 +55,17 @@ function InlineVis(props: PluginMessageDirectiveProps) {
   );
 }
 
+function WorkspaceDirectiveProbe(props: PluginMessageDirectiveProps) {
+  return (
+    <div
+      data-testid="workspace-directive"
+      data-workspace-id={props.attributes.id ?? ""}
+    >
+      workspace:{props.attributes.id}
+    </div>
+  );
+}
+
 function CrashVis(_props: PluginMessageDirectiveProps): never {
   throw new Error("directive boom");
 }
@@ -163,6 +174,32 @@ describe("MarkdownPreview message directives", () => {
     expect(mount.getAttribute("data-project-id")).toBe("proj_1");
     expect(screen.getByText("Intro")).toBeTruthy();
     expect(screen.getByText("Outro")).toBeTruthy();
+  });
+
+  it("preserves the canonical freshly-created workspace id attribute", () => {
+    const registry = buildMessageDirectiveRegistry([
+      slot({
+        id: "sales-workspace",
+        pluginId: "sales",
+        component: WorkspaceDirectiveProbe,
+      }),
+    ]);
+    render(
+      <MarkdownPreview
+        content={'::sales-workspace{id="ws_fresh_123"}'}
+        messageDirectives={{
+          registry,
+          message: MESSAGE,
+          openWorkspaceFile: null,
+        }}
+      />,
+    );
+
+    expect(
+      screen
+        .getByTestId("workspace-directive")
+        .getAttribute("data-workspace-id"),
+    ).toBe("ws_fresh_123");
   });
 
   it("keeps directives in fenced code and inline code literal", () => {

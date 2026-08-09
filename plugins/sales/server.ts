@@ -13,6 +13,7 @@ import {
   workspaceSchema,
 } from "./src/schemas.js";
 import { SALES_AGENT_INSTRUCTIONS } from "./src/instructions.js";
+import { workspaceDirective } from "./src/workspace-directive.js";
 
 const WORKSPACES_KEY = "workspaces";
 const SIGNAL_CHANNEL = "workspaces-changed";
@@ -223,8 +224,13 @@ export default async function plugin(bb: BbPluginApi) {
       "Create a persistent native interactive surface and return its id for ::sales-workspace.",
     parameters: createWorkspaceInputSchema.strict(),
     async execute(input, context) {
+      const workspace = await createWorkspace(context.threadId, input);
       return JSON.stringify(
-        toJson(await createWorkspace(context.threadId, input)),
+        toJson({
+          workspaceId: workspace.id,
+          renderDirective: workspaceDirective(workspace.id),
+          workspace,
+        }),
       );
     },
   });

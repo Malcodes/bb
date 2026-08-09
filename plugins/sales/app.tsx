@@ -43,6 +43,7 @@ import {
 import { ViewRenderer } from "./src/views.js";
 import { safeIcon } from "./src/generated-app.js";
 import { deriveAttentionSummary } from "./src/orchestration.js";
+import { workspaceIdFromDirective } from "./src/workspace-directive.js";
 import type { salesRpcContract } from "./server.js";
 
 function useWorkspace(workspaceId: string) {
@@ -439,7 +440,7 @@ function SalesWorkspaceDirective({
   attributes,
   source,
 }: PluginMessageDirectiveProps) {
-  const workspaceId = attributes.workspaceId?.trim() ?? "";
+  const workspaceId = workspaceIdFromDirective(attributes);
   if (!workspaceId) {
     return (
       <div
