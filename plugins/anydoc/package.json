@@ -1,0 +1,38 @@
+{
+  "name": "bb-plugin-anydoc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "General document ingestion infrastructure for BB agents.",
+  "engines": {
+    "bb": ">=0.0"
+  },
+  "bb": {
+    "name": "AnyDoc",
+    "description": "Convert supported office documents into clean, provenance-preserving agent context.",
+    "branding": {
+      "icon": "FileText"
+    },
+    "server": "./server.ts"
+  },
+  "keywords": [
+    "bb-plugin",
+    "documents",
+    "markdown",
+    "context"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@firecrawl/anydoc-wasm": "^0.1.7",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@bb/plugin-sdk": "workspace:*",
+    "@types/node": "^22.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^4.1.1"
+  }
+}

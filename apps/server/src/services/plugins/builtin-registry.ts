@@ -43,6 +43,12 @@ export const PLUGIN_CATALOG_CATEGORIES = [
 
 export const BUILTIN_PLUGINS = [
   {
+    name: "anydoc",
+    pluginId: "anydoc",
+    defaultEnabled: true,
+    category: "Context & knowledge",
+  },
+  {
     name: "ask-user-question",
     pluginId: "ask-user-question",
     defaultEnabled: false,

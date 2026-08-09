@@ -196,11 +196,13 @@ describe("builtin plugin reconciliation", () => {
 
   it("gives every builtin plugin a deliberate settings icon", async () => {
     const expectedIcons = new Map([
+      ["anydoc", "FileText"],
       ["ask-user-question", "MessageQuestion"],
       ["automations", "Clock"],
       ["connect", "Smartphone"],
       ["custom-instructions", "EditFile"],
       ["inline-vis", "AppWindow"],
+      ["sales", "ChartLineData01"],
       ["secrets", "Lock"],
       ["side-chat", "SideChat"],
       ["workflows", "Workflow"],
@@ -415,6 +417,36 @@ describe("builtin plugin reconciliation", () => {
       },
     ]);
     expect(loadCount()).toBe(1);
+  });
+
+  it("loads the real AnyDoc builtin source and registers its agent tools", async () => {
+    service = createService({
+      db,
+      dataDir: join(workDir, "data"),
+      builtinName: "anydoc",
+      pluginId: "anydoc",
+      rootDir: resolveBuiltinPluginRootPath("anydoc"),
+    });
+    await service.start();
+
+    expect(service.list()).toMatchObject([
+      {
+        id: "anydoc",
+        source: "builtin:anydoc",
+        enabled: true,
+        status: "running",
+        icon: "FileText",
+      },
+    ]);
+    expect(
+      service.listAgentTools().map((contribution) => contribution.tool.name),
+    ).toEqual(
+      expect.arrayContaining([
+        "anydoc_ingest_document",
+        "anydoc_read_document",
+        "anydoc_associate_evidence",
+      ]),
+    );
   });
 
   it("loads the real side-chat builtin source", async () => {

@@ -1033,7 +1033,10 @@ Slot props contracts (versioned, additive-only):
   `useBbNavigate().toPluginPanel(path, { subPath, replace? })` — browser
   back/forward then walks panel-internal history (prefer this over hash
   routing).
-  Registration: `{ id, title, icon, path, component, headerContent? }`.
+  Registration: `{ id, title, icon, path, component, sidebar?, surface?, headerContent? }`.
+  `sidebar` defaults true; set it false for a panel reached only through a
+  dynamic provider. `surface` defaults `"workspace"`; use `"application"`
+  only when the route owns the full app content region outside thread panes.
   The host renders your compact plugin icon + `title` into the SHARED app
   header (the same title bar as Settings pages) with your optional
   `headerContent` component as the header actions on the right — so do NOT
@@ -1044,6 +1047,11 @@ Slot props contracts (versioned, additive-only):
   title bar or the panel body. For a classic page, use an outer scroll region
   with `p-4 md:p-5` and wrap its content in a
   `mx-auto w-full max-w-3xl space-y-4` div.
+- `sidebarNavItems` → `{ setState }` — a dynamic primary-sidebar section.
+  Registration: `{ id, title, targetPanelId, provider }`; the provider publishes
+  `{ items, remove?, reorder? }` through `setState`. Each item deep-links into
+  the plugin's `targetPanelId`, commonly a `navPanel` registered with
+  `sidebar: false`.
 - `threadPanelAction` → an entry in the thread right panel's new-tab
   Actions list (next to "Start side chat" / "Start terminal"), labeled
   `title` with your compact plugin icon. Registration:

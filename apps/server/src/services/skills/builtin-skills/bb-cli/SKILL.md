@@ -347,6 +347,24 @@ For review or fix pipelines, get the environment ID from
 - Use `bb voice transcribe <file>` to invoke the configured voice transcription
   service without the app composer.
 
+## AnyDoc
+
+- The auto-installed AnyDoc plugin is shared document-ingestion infrastructure,
+  not a document UI. It complements the file commands above rather than
+  duplicating browsing or storage.
+- Use `anydoc_ingest_document` for workspace/host files or project attachments in supported Word, PowerPoint, Excel,
+  OpenDocument, RTF, EPUB, CSV, and text-based PDF files. Workspace scope reads
+  on the requesting thread's actual machine and confines the path beneath its
+  workspace root.
+- The result contains clean Markdown, durable source/hash provenance, and a
+  stable `anydoc:sha256:…` evidence reference. Continue large documents with
+  `anydoc_read_document` and attach canonical entity/workstream/goal references
+  with `anydoc_associate_evidence`.
+- Cite the evidence reference in entity facts, opportunities, decisions,
+  external-action proposals, and outcome evaluations. Keep raw document detail
+  agent-side unless it changes what the human must understand, decide, approve,
+  or do.
+
 ## Long-Running Commands
 
 - Use `bb terminal ...` for long-running commands the user may need to inspect

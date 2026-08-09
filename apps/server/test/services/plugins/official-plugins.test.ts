@@ -86,6 +86,7 @@ describe("official plugin registry invariants", () => {
 
   it("assigns every bundled plugin to one curated store category", () => {
     const expectedCategories = {
+      anydoc: "Context & knowledge",
       "ask-user-question": "Agent interaction",
       automations: "Workflow management",
       connect: "Host access",
@@ -94,6 +95,7 @@ describe("official plugin registry invariants", () => {
       github: "Developer tools",
       "inline-vis": "Interface",
       memory: "Context & knowledge",
+      sales: "Interface",
       secrets: "Developer tools",
       "side-chat": "Agent interaction",
       tasks: "Workflow management",

@@ -20,6 +20,7 @@ import {
   type PluginSettingDescriptor,
   type PluginSettingsSectionProps,
   type PluginSidebarFooterActionProps,
+  type PluginSidebarNavItemsProviderProps,
   type PluginThreadHeaderActionProps,
   type PluginThreadListProps,
   type PluginSidebarFooterActionRegistration,
@@ -153,6 +154,7 @@ type SlotPropsByName = {
   homepageSection: PluginHomepageSectionProps;
   settingsSection: PluginSettingsSectionProps;
   navPanel: PluginNavPanelProps;
+  sidebarNavItems: PluginSidebarNavItemsProviderProps;
   threadPanelAction: PluginThreadPanelProps;
   pendingInteraction: PluginPendingInteractionProps;
   sidebarFooterAction: PluginSidebarFooterActionProps;
@@ -216,6 +218,7 @@ const FRONTEND_SLOT_PROP_FIELDS = {
   homepageSection: ["projectId"],
   settingsSection: [],
   navPanel: ["subPath"],
+  sidebarNavItems: ["setState"],
   threadPanelAction: ["threadId", "params"],
   pendingInteraction: ["interaction", "submit", "cancel"],
   sidebarFooterAction: [],
@@ -232,18 +235,8 @@ const FRONTEND_SLOT_PROP_FIELDS = {
     "isCompactViewport",
   ],
   fileOpener: ["path", "source"],
-  messageDirective: [
-    "attributes",
-    "source",
-    "message",
-    "openWorkspaceFile",
-  ],
-  messageAction: [
-    "threadId",
-    "message",
-    "selectedText",
-    "openPanel",
-  ],
+  messageDirective: ["attributes", "source", "message", "openWorkspaceFile"],
+  messageAction: ["threadId", "message", "selectedText", "openPanel"],
 } as const satisfies {
   [S in keyof SlotPropsByName]: readonly (keyof SlotPropsByName[S])[];
 };
@@ -270,6 +263,8 @@ const NAV_PANEL_REGISTRATION_FIELDS = [
   "icon",
   "path",
   "component",
+  "sidebar",
+  "surface",
   "headerContent",
 ] as const satisfies readonly (keyof PluginNavPanelRegistration)[];
 

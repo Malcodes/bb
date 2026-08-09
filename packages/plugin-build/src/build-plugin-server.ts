@@ -1,7 +1,9 @@
 import {
+  cp,
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rename,
   rm,
   stat,
@@ -22,8 +24,10 @@ import { type PluginBuildToolchain } from "./toolchain.js";
  *   have its `.d.ts` types, so the specifier must survive to load time, where
  *   the server's loader aliases it to the SDK runtime bundle shipped next to
  *   the server (workspace resolution covers source checkouts). better-sqlite3
- *   is also external (plugins get sqlite from the host via `bb.storage`;
- *   native deps are unsupported in plugins regardless).
+ *   is also external (plugins get sqlite from the host via `bb.storage`).
+ * - imported `.wasm` files are emitted under `dist/server-assets/` and reached
+ *   through bundle-relative URLs. This gives infrastructure plugins portable,
+ *   self-contained binary parsers without native Node addons or node_modules.
  * - `dist/server.meta.json` — SDK compatibility plus authoritative plugin,
  *   artifact-format, and build-version metadata.
  */
@@ -143,6 +147,8 @@ export async function buildPluginServer(
       platform: "node",
       target: "node22",
       sourcemap: true,
+      loader: { ".wasm": "file" },
+      assetNames: "server-assets/[name]-[hash]",
       banner: { js: NODE_ESM_REQUIRE_BANNER },
       // The server's loader aliases the SDK to its shipped runtime bundle at
       // load time; better-sqlite3 comes from the host (bb.storage). Node
@@ -150,6 +156,25 @@ export async function buildPluginServer(
       external: ["@bb/plugin-sdk", "better-sqlite3"],
       logLevel: "error",
     });
+    const stagedAssetsDir = join(stageDir, "server-assets");
+    const stagedAssetNames = await readdir(stagedAssetsDir).catch(
+      (error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return [];
+        throw error;
+      },
+    );
+    const assetsDir = join(distDir, "server-assets");
+    if (stagedAssetNames.length > 0) {
+      await mkdir(assetsDir, { recursive: true });
+      // Copy new content-addressed assets before flipping server.js. Keep old
+      // assets until afterward, so any failure leaves the previous artifact
+      // complete and runnable.
+      for (const name of stagedAssetNames) {
+        await cp(join(stagedAssetsDir, name), join(assetsDir, name), {
+          recursive: true,
+        });
+      }
+    }
     await writeFile(
       stagedMetaPath,
       JSON.stringify(
@@ -163,6 +188,19 @@ export async function buildPluginServer(
     await rename(stagedJsPath, jsPath);
     await rename(join(stageDir, "server.js.map"), mapPath);
     await rename(stagedMetaPath, metaPath);
+
+    // The complete new artifact is live. Remove backend assets no longer
+    // referenced by it; failures here are harmless stale-file cleanup only.
+    if (stagedAssetNames.length === 0) {
+      await rm(assetsDir, { recursive: true, force: true });
+    } else {
+      const keep = new Set(stagedAssetNames);
+      for (const name of await readdir(assetsDir)) {
+        if (!keep.has(name)) {
+          await rm(join(assetsDir, name), { recursive: true, force: true });
+        }
+      }
+    }
   } finally {
     await rm(stageDir, { recursive: true, force: true });
   }
