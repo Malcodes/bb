@@ -241,6 +241,15 @@ const sourceBindingSchema = z.object({
   resource: z.string().optional(),
   scopes: z.array(z.string()),
 });
+const capabilityBindingSchema = z.object({
+  id: z.string(),
+  role: z.enum(["source", "infrastructure", "action-channel"]),
+  kind: z.string(),
+  label: z.string(),
+  enabled: z.boolean(),
+  resource: z.string().optional(),
+  scopes: z.array(z.string()),
+});
 const permissionModelSchema = z.object({
   observe: z.object({ sourceIds: z.array(z.string()) }),
   internalState: z.enum(["automatic", "recommend-only"]),
@@ -254,6 +263,85 @@ const autonomyPolicySchema = z.object({
   constraints: z.array(z.string()),
   cadenceMinutes: z.number().int().min(5).max(1440),
   permissions: permissionModelSchema,
+});
+const autonomyGoalSchema = z.object({
+  id: z.string(),
+  objective: z.string(),
+  successCriteria: z.array(z.string()),
+  status: z.enum(["active", "paused", "achieved", "blocked"]),
+  progress: z.number().min(0).max(1),
+  lastEvaluatedAt: z.string().optional(),
+  assessment: z.string().optional(),
+});
+const entityFactSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  confidence: z.number().min(0).max(1),
+  evidence: z.array(z.string()),
+  observedAt: z.string(),
+});
+const entityMemorySchema = z.object({
+  ref: z.string(),
+  kind: z.string(),
+  label: z.string(),
+  aliases: z.array(z.string()),
+  facts: z.array(entityFactSchema),
+  updatedAt: z.string(),
+});
+const opportunitySchema = z.object({
+  id: z.string(),
+  entityRefs: z.array(z.string()),
+  title: z.string(),
+  hypothesis: z.string(),
+  evidence: z.array(z.string()),
+  score: z.number().min(0).max(1),
+  status: z.enum([
+    "discovered",
+    "researching",
+    "qualified",
+    "advanced",
+    "dismissed",
+    "completed",
+  ]),
+  nextAction: z.string().optional(),
+  discoveredAt: z.string(),
+  updatedAt: z.string(),
+});
+const externalActionSchema = z.object({
+  id: z.string(),
+  idempotencyKey: z.string(),
+  title: z.string(),
+  actionType: z.string(),
+  channelBindingId: z.string(),
+  target: z.string(),
+  payloadSummary: z.string(),
+  rationale: z.string(),
+  evidence: z.array(z.string()),
+  status: z.enum([
+    "proposed",
+    "approved",
+    "rejected",
+    "executing",
+    "succeeded",
+    "failed",
+  ]),
+  createdAt: z.string(),
+  approvedAt: z.string().optional(),
+  executionStartedAt: z.string().optional(),
+  completedAt: z.string().optional(),
+  attempts: z.number().int().nonnegative(),
+  lastError: z.string().optional(),
+  outcome: z.string().optional(),
+});
+const outcomeSchema = z.object({
+  id: z.string(),
+  goalId: z.string().optional(),
+  actionId: z.string().optional(),
+  observedAt: z.string(),
+  result: z.enum(["positive", "negative", "neutral", "unknown"]),
+  assessment: z.string(),
+  evidence: z.array(z.string()),
+  followUp: z.string().optional(),
 });
 const autonomySignalSchema = z.object({
   id: z.string(),
@@ -284,12 +372,19 @@ const autonomyRecommendationSchema = z.object({
   rationale: z.string(),
   evidence: z.array(z.string()),
   proposedAction: z.string().optional(),
+  externalActionId: z.string().optional(),
   status: z.enum(["open", "approved", "rejected", "resolved"]),
   createdAt: z.string(),
   resolvedAt: z.string().optional(),
 });
 const autonomyStateSchema = z.object({
   policy: autonomyPolicySchema,
+  capabilities: z.array(capabilityBindingSchema),
+  goals: z.array(autonomyGoalSchema),
+  entities: z.array(entityMemorySchema),
+  opportunities: z.array(opportunitySchema),
+  externalActions: z.array(externalActionSchema),
+  outcomes: z.array(outcomeSchema),
   sources: z.array(sourceBindingSchema),
   signals: z.array(autonomySignalSchema),
   runs: z.array(autonomyRunSchema),

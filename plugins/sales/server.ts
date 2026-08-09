@@ -102,6 +102,22 @@ export const salesRpcContract = defineRpcContract({
               .strict(),
           )
           .max(50),
+        capabilityBindings: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                role: z.enum(["source", "infrastructure", "action-channel"]),
+                kind: z.string().min(1),
+                label: z.string().min(1),
+                enabled: z.boolean(),
+                resource: z.string().optional(),
+                scopes: z.array(z.string()),
+              })
+              .strict(),
+          )
+          .max(100)
+          .default([]),
         permissions: z
           .object({
             observe: z.object({ sourceIds: z.array(z.string()) }).strict(),
@@ -155,6 +171,12 @@ export default async function plugin(bb: BbPluginApi) {
     if (!ws.autonomy) {
       ws.autonomy = {
         policy: structuredClone(DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY),
+        capabilities: [],
+        goals: [],
+        entities: [],
+        opportunities: [],
+        externalActions: [],
+        outcomes: [],
         sources: [],
         signals: [],
         runs: [],
@@ -166,9 +188,30 @@ export default async function plugin(bb: BbPluginApi) {
         internalActions?: "automatic" | "recommend-only";
         externalActions?: "require-approval";
       };
+      capabilities?: GeneratedToolAutonomyState["capabilities"];
+      goals?: GeneratedToolAutonomyState["goals"];
+      entities?: GeneratedToolAutonomyState["entities"];
+      opportunities?: GeneratedToolAutonomyState["opportunities"];
+      externalActions?: GeneratedToolAutonomyState["externalActions"];
+      outcomes?: GeneratedToolAutonomyState["outcomes"];
       sources?: GeneratedToolAutonomyState["sources"];
       signals?: GeneratedToolAutonomyState["signals"];
     };
+    legacy.capabilities ??=
+      legacy.sources?.map((source) => ({
+        id: source.id,
+        role: "source" as const,
+        kind: source.kind,
+        label: source.label,
+        enabled: source.enabled,
+        resource: source.resource,
+        scopes: source.scopes,
+      })) ?? [];
+    legacy.goals ??= [];
+    legacy.entities ??= [];
+    legacy.opportunities ??= [];
+    legacy.externalActions ??= [];
+    legacy.outcomes ??= [];
     legacy.sources ??= [];
     legacy.signals ??= [];
     legacy.policy.permissions ??= {
@@ -219,6 +262,7 @@ export default async function plugin(bb: BbPluginApi) {
         revision: ws.revision ?? 0,
       } as Workspace;
       upgradeLegacyMetrics(workspace);
+      if (workspace.autonomy) autonomy(workspace);
       return workspace;
     });
   }
@@ -345,7 +389,14 @@ export default async function plugin(bb: BbPluginApi) {
       if (!state.policy.enabled) continue;
       if (state.runs.some((run) => run.status === "running")) continue;
       const lastAt = state.runs[0] ? Date.parse(state.runs[0]!.startedAt) : 0;
-      if (now - lastAt < state.policy.cadenceMinutes * 60_000) continue;
+      const hasApprovedAction = state.externalActions.some(
+        (action) => action.status === "approved",
+      );
+      if (
+        !hasApprovedAction &&
+        now - lastAt < state.policy.cadenceMinutes * 60_000
+      )
+        continue;
       try {
         const origin = await bb.sdk.threads.get({
           threadId: snapshot.originThreadId,
@@ -364,6 +415,7 @@ export default async function plugin(bb: BbPluginApi) {
             title: snapshot.title,
             policy: state.policy,
             sources: state.sources,
+            capabilities: state.capabilities,
           }),
           title: `${snapshot.title} · operator cycle`,
           providerId: origin.providerId,
@@ -646,6 +698,22 @@ export default async function plugin(bb: BbPluginApi) {
               .strict(),
           )
           .max(50),
+        capabilityBindings: z
+          .array(
+            z
+              .object({
+                id: z.string().min(1),
+                role: z.enum(["source", "infrastructure", "action-channel"]),
+                kind: z.string().min(1),
+                label: z.string().min(1),
+                enabled: z.boolean(),
+                resource: z.string().optional(),
+                scopes: z.array(z.string()),
+              })
+              .strict(),
+          )
+          .max(100)
+          .default([]),
         permissions: z
           .object({
             observe: z.object({ sourceIds: z.array(z.string()) }).strict(),
@@ -673,6 +741,17 @@ export default async function plugin(bb: BbPluginApi) {
         toJson(
           await updateWorkspace(input.workspaceId, (workspace) => {
             autonomy(workspace).sources = input.sourceBindings;
+            autonomy(workspace).capabilities = [
+              ...input.capabilityBindings,
+              ...input.sourceBindings
+                .filter(
+                  (source) =>
+                    !input.capabilityBindings.some(
+                      (binding) => binding.id === source.id,
+                    ),
+                )
+                .map((source) => ({ ...source, role: "source" as const })),
+            ];
             autonomy(workspace).policy = {
               enabled: input.enabled,
               goal: input.goal,
@@ -685,6 +764,351 @@ export default async function plugin(bb: BbPluginApi) {
       );
     },
   });
+  bb.agents.registerTool({
+    name: "generated_operations_set_goal",
+    description:
+      "Create or update a durable goal with explicit success criteria and measured progress.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        goalId: z.string().min(1).optional(),
+        objective: z.string().min(1).max(2000),
+        successCriteria: z.array(z.string().min(1).max(500)).min(1).max(20),
+        status: z
+          .enum(["active", "paused", "achieved", "blocked"])
+          .default("active"),
+        progress: z.number().min(0).max(1).default(0),
+        assessment: z.string().max(2000).optional(),
+      })
+      .strict(),
+    async execute(input) {
+      return JSON.stringify(
+        toJson(
+          await updateWorkspace(input.workspaceId, (workspace) => {
+            const state = autonomy(workspace);
+            const existing = input.goalId
+              ? state.goals.find((goal) => goal.id === input.goalId)
+              : undefined;
+            const goal = {
+              id: existing?.id ?? newId("goal"),
+              objective: input.objective,
+              successCriteria: input.successCriteria,
+              status: input.status,
+              progress: input.progress,
+              lastEvaluatedAt: new Date().toISOString(),
+              assessment: input.assessment,
+            };
+            if (existing) Object.assign(existing, goal);
+            else state.goals.unshift(goal);
+            state.policy.goal =
+              state.goals.find((candidate) => candidate.status === "active")
+                ?.objective ?? state.policy.goal;
+          }),
+        ),
+      );
+    },
+  });
+  bb.agents.registerTool({
+    name: "generated_operations_upsert_entity",
+    description:
+      "Maintain canonical entity memory with confidence-scored, evidence-backed facts and aliases.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        ref: z.string().min(1),
+        kind: z.string().min(1),
+        label: z.string().min(1),
+        aliases: z.array(z.string()).max(50).default([]),
+        facts: z
+          .array(
+            z
+              .object({
+                key: z.string().min(1),
+                value: z.string(),
+                confidence: z.number().min(0).max(1),
+                evidence: z.array(z.string()).min(1).max(20),
+                observedAt: z.string(),
+              })
+              .strict(),
+          )
+          .max(100),
+      })
+      .strict(),
+    async execute(input) {
+      return JSON.stringify(
+        toJson(
+          await updateWorkspace(input.workspaceId, (workspace) => {
+            const state = autonomy(workspace);
+            const entity = state.entities.find(
+              (candidate) => candidate.ref === input.ref,
+            );
+            if (!entity) {
+              state.entities.unshift({
+                ref: input.ref,
+                kind: input.kind,
+                label: input.label,
+                aliases: [...new Set(input.aliases)],
+                facts: input.facts,
+                updatedAt: new Date().toISOString(),
+              });
+              return;
+            }
+            entity.kind = input.kind;
+            entity.label = input.label;
+            entity.aliases = [
+              ...new Set([...entity.aliases, ...input.aliases]),
+            ];
+            for (const fact of input.facts) {
+              const current = entity.facts.find(
+                (candidate) => candidate.key === fact.key,
+              );
+              if (
+                !current ||
+                fact.observedAt >= current.observedAt ||
+                fact.confidence > current.confidence
+              ) {
+                if (current) Object.assign(current, fact);
+                else entity.facts.push(fact);
+              }
+            }
+            entity.updatedAt = new Date().toISOString();
+          }),
+        ),
+      );
+    },
+  });
+  bb.agents.registerTool({
+    name: "generated_operations_upsert_opportunity",
+    description:
+      "Discover, research, score, prioritize, and advance a goal-relevant opportunity with evidence.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        opportunityId: z.string().min(1).optional(),
+        entityRefs: z.array(z.string().min(1)).max(50),
+        title: z.string().min(1).max(200),
+        hypothesis: z.string().min(1).max(2000),
+        evidence: z.array(z.string()).min(1).max(30),
+        score: z.number().min(0).max(1),
+        status: z.enum([
+          "discovered",
+          "researching",
+          "qualified",
+          "advanced",
+          "dismissed",
+          "completed",
+        ]),
+        nextAction: z.string().max(1000).optional(),
+      })
+      .strict(),
+    async execute(input) {
+      return JSON.stringify(
+        toJson(
+          await updateWorkspace(input.workspaceId, (workspace) => {
+            const state = autonomy(workspace);
+            const now = new Date().toISOString();
+            const existing = input.opportunityId
+              ? state.opportunities.find(
+                  (item) => item.id === input.opportunityId,
+                )
+              : state.opportunities.find(
+                  (item) =>
+                    item.title === input.title && item.status !== "dismissed",
+                );
+            const opportunity = {
+              id: existing?.id ?? newId("opp"),
+              entityRefs: [...new Set(input.entityRefs)],
+              title: input.title,
+              hypothesis: input.hypothesis,
+              evidence: input.evidence,
+              score: input.score,
+              status: input.status,
+              nextAction: input.nextAction,
+              discoveredAt: existing?.discoveredAt ?? now,
+              updatedAt: now,
+            };
+            if (existing) Object.assign(existing, opportunity);
+            else state.opportunities.unshift(opportunity);
+            state.opportunities.sort((a, b) => b.score - a.score);
+          }),
+        ),
+      );
+    },
+  });
+  bb.agents.registerTool({
+    name: "generated_operations_propose_external_action",
+    description:
+      "Create an idempotent consequential external-action proposal for explicit human approval; this does not execute it.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        idempotencyKey: z.string().min(1).max(300),
+        title: z.string().min(1).max(200),
+        actionType: z.string().min(1).max(100),
+        channelBindingId: z.string().min(1),
+        target: z.string().min(1).max(500),
+        payloadSummary: z.string().min(1).max(2000),
+        rationale: z.string().min(1).max(2000),
+        evidence: z.array(z.string()).min(1).max(30),
+      })
+      .strict(),
+    async execute(input) {
+      let actionId = "";
+      const workspace = await updateWorkspace(
+        input.workspaceId,
+        (workspace) => {
+          const state = autonomy(workspace);
+          if (
+            !generatedToolCapabilityAllowed(state.policy.permissions, {
+              capability: "prepare-external-action",
+            })
+          ) {
+            throw new Error(
+              "external-action preparation is recommend-only or disabled",
+            );
+          }
+          const channel = state.capabilities.find(
+            (binding) =>
+              binding.id === input.channelBindingId &&
+              binding.role === "action-channel" &&
+              binding.enabled,
+          );
+          if (!channel) {
+            throw new Error(
+              `enabled action-channel binding not found: ${input.channelBindingId}`,
+            );
+          }
+          const duplicate = state.externalActions.find(
+            (item) => item.idempotencyKey === input.idempotencyKey,
+          );
+          if (duplicate) {
+            actionId = duplicate.id;
+            return;
+          }
+          const action = {
+            id: newId("action"),
+            idempotencyKey: input.idempotencyKey,
+            title: input.title,
+            actionType: input.actionType,
+            channelBindingId: input.channelBindingId,
+            target: input.target,
+            payloadSummary: input.payloadSummary,
+            rationale: input.rationale,
+            evidence: input.evidence,
+            status: "proposed" as const,
+            createdAt: new Date().toISOString(),
+            attempts: 0,
+          };
+          actionId = action.id;
+          state.externalActions.unshift(action);
+          state.recommendations.unshift({
+            id: newId("rec"),
+            kind: "external-action",
+            title: input.title,
+            rationale: input.rationale,
+            evidence: input.evidence,
+            proposedAction: `${input.actionType} → ${input.target}: ${input.payloadSummary}`,
+            externalActionId: action.id,
+            status: "open",
+            createdAt: action.createdAt,
+          });
+        },
+      );
+      const action = autonomy(workspace).externalActions.find(
+        (item) => item.id === actionId,
+      );
+      return JSON.stringify(toJson(action));
+    },
+  });
+  bb.agents.registerTool({
+    name: "generated_operations_claim_approved_action",
+    description:
+      "Atomically claim one explicitly approved external action before executing it. Idempotency prevents duplicate side effects.",
+    parameters: z
+      .object({ workspaceId: z.string().min(1), actionId: z.string().min(1) })
+      .strict(),
+    async execute({ workspaceId, actionId }) {
+      let claimed: unknown;
+      await updateWorkspace(workspaceId, (workspace) => {
+        const state = autonomy(workspace);
+        const action = state.externalActions.find(
+          (item) => item.id === actionId,
+        );
+        if (!action) throw new Error(`external action not found: ${actionId}`);
+        if (
+          !generatedToolCapabilityAllowed(state.policy.permissions, {
+            capability: "execute-consequential-action",
+            proposalStatus: action.status === "approved" ? "approved" : "open",
+          })
+        ) {
+          throw new Error(
+            "external action is not explicitly approved for execution",
+          );
+        }
+        if (action.status !== "approved")
+          throw new Error(
+            `external action cannot be claimed from status ${action.status}`,
+          );
+        action.status = "executing";
+        action.executionStartedAt = new Date().toISOString();
+        action.attempts += 1;
+        claimed = structuredClone(action);
+      });
+      return JSON.stringify(toJson(claimed));
+    },
+  });
+  bb.agents.registerTool({
+    name: "generated_operations_record_action_outcome",
+    description:
+      "Record the authoritative result of a claimed external action and evaluate what it means for the goal.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        actionId: z.string().min(1),
+        succeeded: z.boolean(),
+        outcome: z.string().min(1).max(3000),
+        error: z.string().max(2000).optional(),
+        result: z.enum(["positive", "negative", "neutral", "unknown"]),
+        assessment: z.string().min(1).max(2000),
+        evidence: z.array(z.string()).min(1).max(30),
+        goalId: z.string().optional(),
+        followUp: z.string().max(1000).optional(),
+      })
+      .strict(),
+    async execute(input) {
+      return JSON.stringify(
+        toJson(
+          await updateWorkspace(input.workspaceId, (workspace) => {
+            const state = autonomy(workspace);
+            const action = state.externalActions.find(
+              (item) => item.id === input.actionId,
+            );
+            if (!action)
+              throw new Error(`external action not found: ${input.actionId}`);
+            if (action.status !== "executing")
+              throw new Error(
+                `external action outcome requires executing status, found ${action.status}`,
+              );
+            action.status = input.succeeded ? "succeeded" : "failed";
+            action.completedAt = new Date().toISOString();
+            action.outcome = input.outcome;
+            action.lastError = input.error;
+            state.outcomes.unshift({
+              id: newId("outcome"),
+              goalId: input.goalId,
+              actionId: action.id,
+              observedAt: action.completedAt,
+              result: input.result,
+              assessment: input.assessment,
+              evidence: input.evidence,
+              followUp: input.followUp,
+            });
+          }),
+        ),
+      );
+    },
+  });
+
   bb.agents.registerTool({
     name: "generated_tool_evolve_presentation",
     description:
@@ -745,11 +1169,11 @@ export default async function plugin(bb: BbPluginApi) {
   bb.agents.registerTool({
     name: "generated_tool_report_recommendation",
     description:
-      "Surface a recommendation, exception, or consequential external-action proposal with evidence. External actions always await human approval.",
+      "Surface an evidence-backed recommendation or exception. Use generated_operations_propose_external_action for any consequential external side effect.",
     parameters: z
       .object({
         workspaceId: z.string().min(1),
-        kind: z.enum(["recommendation", "exception", "external-action"]),
+        kind: z.enum(["recommendation", "exception"]),
         title: z.string().min(1).max(200),
         rationale: z.string().min(1).max(2000),
         evidence: z.array(z.string().max(1000)).min(1).max(20),
@@ -786,6 +1210,12 @@ export default async function plugin(bb: BbPluginApi) {
       "sales_create_workspace",
       "sales_mutate_workspace",
       "generated_tool_configure_autonomy",
+      "generated_operations_set_goal",
+      "generated_operations_upsert_entity",
+      "generated_operations_upsert_opportunity",
+      "generated_operations_propose_external_action",
+      "generated_operations_claim_approved_action",
+      "generated_operations_record_action_outcome",
       "generated_tool_report_recommendation",
       "generated_tool_evolve_presentation",
       "generated_operations_ingest_signal",
@@ -834,6 +1264,17 @@ export default async function plugin(bb: BbPluginApi) {
       return toJson(
         await updateWorkspace(input.workspaceId, (workspace) => {
           autonomy(workspace).sources = input.sourceBindings;
+          autonomy(workspace).capabilities = [
+            ...input.capabilityBindings,
+            ...input.sourceBindings
+              .filter(
+                (source) =>
+                  !input.capabilityBindings.some(
+                    (binding) => binding.id === source.id,
+                  ),
+              )
+              .map((source) => ({ ...source, role: "source" as const })),
+          ];
           autonomy(workspace).policy = {
             enabled: input.enabled,
             goal: input.goal,
@@ -852,8 +1293,35 @@ export default async function plugin(bb: BbPluginApi) {
           );
           if (!recommendation)
             throw new Error(`recommendation not found: ${recommendationId}`);
+          const now = new Date().toISOString();
           recommendation.status = decision;
-          recommendation.resolvedAt = new Date().toISOString();
+          recommendation.resolvedAt = now;
+          if (recommendation.externalActionId) {
+            const action = autonomy(workspace).externalActions.find(
+              (candidate) => candidate.id === recommendation.externalActionId,
+            );
+            if (!action) {
+              throw new Error(
+                `external action not found: ${recommendation.externalActionId}`,
+              );
+            }
+            if (action.status !== "proposed") {
+              throw new Error(
+                `external action cannot be decided from status ${action.status}`,
+              );
+            }
+            if (decision === "approved") {
+              action.status = "approved";
+              action.approvedAt = now;
+            } else if (decision === "rejected") {
+              action.status = "rejected";
+              action.completedAt = now;
+            } else {
+              throw new Error(
+                "external-action proposals must be approved or rejected",
+              );
+            }
+          }
         }),
       );
     },

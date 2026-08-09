@@ -98,8 +98,8 @@ describe("generated-tool proactive operator", () => {
       "generated_tool_report_recommendation",
       {
         workspaceId,
-        kind: "external-action",
-        title: "Send verified outreach",
+        kind: "exception",
+        title: "Verified outreach is blocked",
         rationale: "A response would unblock the record.",
         evidence: ["Verified contact page"],
         proposedAction: "Send the drafted message",
@@ -114,7 +114,7 @@ describe("generated-tool proactive operator", () => {
       workerThreadId: "worker-1",
     });
     expect(workspace.autonomy.recommendations[0]).toMatchObject({
-      kind: "external-action",
+      kind: "exception",
       status: "open",
     });
     expect(
@@ -169,10 +169,10 @@ describe("generated-tool proactive operator", () => {
     workspace = await host.harness.callRpc("resolveRecommendation", {
       workspaceId,
       recommendationId: workspace.autonomy.recommendations[0].id,
-      decision: "approved",
+      decision: "resolved",
     });
     expect((workspace as any).autonomy.recommendations[0].status).toBe(
-      "approved",
+      "resolved",
     );
     await host.harness.dispose();
   });

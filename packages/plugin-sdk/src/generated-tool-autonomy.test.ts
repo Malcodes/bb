@@ -11,6 +11,16 @@ describe("generated operations autonomy contract", () => {
     const prompt = buildGeneratedToolAutonomyPrompt({
       workspaceId: "ws1",
       title: "Research tracker",
+      capabilities: [
+        {
+          id: "send-channel",
+          role: "action-channel",
+          kind: "messaging",
+          label: "Messaging",
+          enabled: true,
+          scopes: ["send"],
+        },
+      ],
       sources: [
         {
           id: "meetings",
@@ -34,10 +44,13 @@ describe("generated operations autonomy contract", () => {
       },
     });
     expect(prompt).toContain("meeting-transcript");
+    expect(prompt).toContain("action-channel/messaging");
     expect(prompt).toContain("Observation does not imply mutation");
     expect(prompt).toContain("Preparing a draft does not authorize execution");
     expect(prompt).toContain("never modify BB platform/runtime infrastructure");
     expect(prompt).toContain("individual proposal has explicit human approval");
+    expect(prompt).toContain("atomically claim the approved action");
+    expect(prompt).toContain("evaluate outcomes against goal success criteria");
     expect(prompt).not.toMatch(/sales|job search/i);
   });
 
@@ -96,6 +109,29 @@ describe("generated operations autonomy contract", () => {
         workspaceId: "fractional-ae",
         autonomy: {
           policy: DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY,
+          capabilities: [],
+          goals: [
+            {
+              id: "goal1",
+              objective: "Create qualified opportunities",
+              successCriteria: ["Three qualified"],
+              status: "active",
+              progress: 0.33,
+              assessment: "One of three qualified.",
+            },
+          ],
+          entities: [],
+          opportunities: [],
+          externalActions: [],
+          outcomes: [
+            {
+              id: "outcome1",
+              observedAt: "2026-08-09T00:02:00Z",
+              result: "positive",
+              assessment: "Verified outreach was delivered.",
+              evidence: ["receipt:1"],
+            },
+          ],
           sources: [],
           signals: [],
           runs: [
@@ -123,7 +159,15 @@ describe("generated operations autonomy contract", () => {
       { workspaceId: "job-search" },
     ]);
     expect(brief.changedWorkspaceIds).toEqual(["fractional-ae"]);
+    expect(brief.goals[0]).toMatchObject({
+      objective: "Create qualified opportunities",
+      progress: 0.33,
+    });
     expect(brief.handled[0]?.summary).toBe("Verified two accounts.");
+    expect(brief.outcomes[0]).toMatchObject({
+      result: "positive",
+      assessment: "Verified outreach was delivered.",
+    });
     expect(brief.attention[0]).toMatchObject({
       workspaceId: "fractional-ae",
       kind: "external-action",

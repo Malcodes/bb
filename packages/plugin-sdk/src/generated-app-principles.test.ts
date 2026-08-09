@@ -16,6 +16,10 @@ describe("generated-app agent principles", () => {
       "human capability amplification",
     );
     expect(GENERATED_APP_AGENT_PRINCIPLES).toContain("domain-independent");
+    expect(GENERATED_APP_AGENT_PRINCIPLES).toContain("capability adapters");
+    expect(GENERATED_APP_AGENT_PRINCIPLES).toContain(
+      "Do not recreate a database, dashboard, workflow editor, CRM, inbox, or calendar",
+    );
     expect(GENERATED_APP_AGENT_PRINCIPLES).not.toMatch(/job search/i);
   });
 });

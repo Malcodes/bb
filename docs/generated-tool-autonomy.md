@@ -45,3 +45,28 @@ Generated tools are not restricted to one high-level page template. The shared S
 Composition is presentation state: persistent, agent-editable, schema-validated, responsive, and independent of operational collections. The safety envelope allows at most 64 nodes, six levels, 24 children per container, eight tabs, and only references visible registered views. Existing workspaces without a composition keep the sortable module stack, so this is additive rather than a migration cliff.
 
 Agents should derive composition from the actual information architecture. Relationship work, pipelines, job searches, project command centers, and research should not converge visually unless their hierarchy and interaction needs genuinely match. Arbitrary HTML remains an escape hatch only when this native vocabulary cannot express a genuinely novel interface.
+
+## Capability adapters, not application replicas
+
+BB does not replace every external product with another application. Email, calendar, CRM, files, meeting systems, browsers, payment systems, and future products are capability adapters:
+
+- **sources** emit evidence and real-world events;
+- **infrastructure** supports memory, identity, scheduling, research, and computation;
+- **action channels** execute a narrowly described side effect after policy permits it.
+
+Their full databases and clerical interfaces do not need to be projected to the human. The autonomous operating state is goals, canonical entity memory, opportunities, evidence, actions, and outcomes. The attention projection contains only material understanding, decisions, exceptions, approvals, and high-value actions.
+
+## Persistent operating loop
+
+1. Maintain durable goals with explicit success criteria and evaluated progress.
+2. Ingest and deduplicate real-world signals from granted source adapters.
+3. Reconcile canonical entities and confidence-scored facts with provenance.
+4. Discover, research, score, prioritize, and advance opportunities.
+5. Perform permitted internal work without clerical prompts.
+6. Prepare a consequential action as an idempotent proposal.
+7. Wait for explicit human approval; a connector grant or conversation is not approval.
+8. Atomically claim the approved action once before calling an action channel.
+9. Persist the authoritative result, evidence, and any failure.
+10. Evaluate goal impact and schedule the next follow-up.
+
+Approved actions bypass normal research cadence so they are picked up promptly. Claims transition `approved → executing`; duplicate claims are rejected. Outcome recording requires `executing` state and settles the action as `succeeded` or `failed` with an evaluation record.

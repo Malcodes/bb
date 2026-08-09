@@ -21,6 +21,6 @@ When designing or modifying any BB-generated app:
 
 The product-level measure of success is human capability amplification, not automation volume: increase the number and ambition of objectives one person can pursue, the situational awareness they can retain, the quality and speed of their decisions, and the operational surface area they can govern. Automation is useful only insofar as it creates that leverage.
 
-Sales/GTM is one proving domain, not the platform boundary. These principles are domain-independent.
+Sales/GTM is one proving domain, not the platform boundary. These principles are domain-independent. BB is not trying to replace every application with another application: it absorbs external products as capability adapters—data sources, infrastructure, and action channels agents use toward human goals. Do not recreate a database, dashboard, workflow editor, CRM, inbox, or calendar merely because structured state or an integration exists. Keep that state agent-readable under the hood and project only goals, material understanding, decisions, exceptions, approvals, high-value actions, and outcomes where human attention creates value.
 
 A generated app is therefore an agent-operated system with a human oversight and decision surface—not a passive database that transfers clerical work to the user.`;

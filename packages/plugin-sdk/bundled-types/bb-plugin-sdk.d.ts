@@ -260,9 +260,9 @@ declare const hostSchema: z$1.ZodObject<{
         disconnected: "disconnected";
     }>;
     maxPermissionMode: z$1.ZodEnum<{
+        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
-        full: "full";
     }>;
     lastSeenAt: z$1.ZodNullable<z$1.ZodNumber>;
     lastRejectedProtocolVersion: z$1.ZodNullable<z$1.ZodNumber>;
@@ -314,8 +314,8 @@ declare const providerPendingInteractionSchema: z$1.ZodObject<{
     id: z$1.ZodString;
     threadId: z$1.ZodString;
     status: z$1.ZodEnum<{
-        pending: "pending";
         interrupted: "interrupted";
+        pending: "pending";
         resolving: "resolving";
         resolved: "resolved";
     }>;
@@ -452,8 +452,8 @@ declare const pluginPendingInteractionSchema: z$1.ZodObject<{
     id: z$1.ZodString;
     threadId: z$1.ZodString;
     status: z$1.ZodEnum<{
-        pending: "pending";
         interrupted: "interrupted";
+        pending: "pending";
         resolving: "resolving";
         resolved: "resolved";
     }>;
@@ -508,9 +508,9 @@ declare const serviceTierSchema: z$1.ZodEnum<{
 }>;
 type ServiceTier = z$1.infer<typeof serviceTierSchema>;
 declare const permissionModeSchema: z$1.ZodEnum<{
+    full: "full";
     auto: "auto";
     "accept-edits": "accept-edits";
-    full: "full";
 }>;
 type PermissionMode = z$1.infer<typeof permissionModeSchema>;
 declare const promptInputSchema: z$1.ZodDiscriminatedUnion<[z$1.ZodObject<{
@@ -613,9 +613,9 @@ declare const resolvedThreadExecutionOptionsSchema: z$1.ZodObject<{
         ultra: "ultra";
     }>;
     permissionMode: z$1.ZodEnum<{
+        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
-        full: "full";
     }>;
     source: z$1.ZodEnum<{
         "client/thread/start": "client/thread/start";
@@ -642,9 +642,9 @@ declare const projectExecutionDefaultsSchema: z$1.ZodObject<{
         ultra: "ultra";
     }>;
     permissionMode: z$1.ZodEnum<{
+        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
-        full: "full";
     }>;
 }, z$1.core.$strip>;
 type ProjectExecutionDefaults = z$1.infer<typeof projectExecutionDefaultsSchema>;
@@ -700,8 +700,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
     providerThreadId: z$1.ZodString;
     objective: z$1.ZodString;
     status: z$1.ZodEnum<{
-        paused: "paused";
         active: "active";
+        paused: "paused";
         budgetLimited: "budgetLimited";
         complete: "complete";
     }>;
@@ -745,10 +745,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         command: z$1.ZodString;
         cwd: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         approvalStatus: z$1.ZodNullable<z$1.ZodEnum<{
             waiting_for_approval: "waiting_for_approval";
@@ -792,10 +792,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
             diff: z$1.ZodOptional<z$1.ZodString>;
         }, z$1.core.$strip>>;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         approvalStatus: z$1.ZodNullable<z$1.ZodEnum<{
             waiting_for_approval: "waiting_for_approval";
@@ -832,10 +832,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
             completed: z$1.ZodString;
         }, z$1.core.$strip>>;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         result: z$1.ZodOptional<z$1.ZodUnknown>;
         error: z$1.ZodOptional<z$1.ZodString>;
@@ -882,17 +882,17 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         taskType: z$1.ZodString;
         description: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         taskStatus: z$1.ZodEnum<{
-            pending: "pending";
-            running: "running";
-            paused: "paused";
             completed: "completed";
             failed: "failed";
+            paused: "paused";
+            pending: "pending";
+            running: "running";
             killed: "killed";
             stopped: "stopped";
         }>;
@@ -908,8 +908,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
                 index: z$1.ZodNumber;
                 label: z$1.ZodString;
                 state: z$1.ZodEnum<{
-                    running: "running";
                     failed: "failed";
+                    running: "running";
                     queued: "queued";
                     done: "done";
                     skipped: "skipped";
@@ -977,10 +977,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         command: z$1.ZodString;
         cwd: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         approvalStatus: z$1.ZodNullable<z$1.ZodEnum<{
             waiting_for_approval: "waiting_for_approval";
@@ -1024,10 +1024,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
             diff: z$1.ZodOptional<z$1.ZodString>;
         }, z$1.core.$strip>>;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         approvalStatus: z$1.ZodNullable<z$1.ZodEnum<{
             waiting_for_approval: "waiting_for_approval";
@@ -1064,10 +1064,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
             completed: z$1.ZodString;
         }, z$1.core.$strip>>;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         result: z$1.ZodOptional<z$1.ZodUnknown>;
         error: z$1.ZodOptional<z$1.ZodString>;
@@ -1114,17 +1114,17 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         taskType: z$1.ZodString;
         description: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         taskStatus: z$1.ZodEnum<{
-            pending: "pending";
-            running: "running";
-            paused: "paused";
             completed: "completed";
             failed: "failed";
+            paused: "paused";
+            pending: "pending";
+            running: "running";
             killed: "killed";
             stopped: "stopped";
         }>;
@@ -1140,8 +1140,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
                 index: z$1.ZodNumber;
                 label: z$1.ZodString;
                 state: z$1.ZodEnum<{
-                    running: "running";
                     failed: "failed";
+                    running: "running";
                     queued: "queued";
                     done: "done";
                     skipped: "skipped";
@@ -1243,17 +1243,17 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         taskType: z$1.ZodString;
         description: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         taskStatus: z$1.ZodEnum<{
-            pending: "pending";
-            running: "running";
-            paused: "paused";
             completed: "completed";
             failed: "failed";
+            paused: "paused";
+            pending: "pending";
+            running: "running";
             killed: "killed";
             stopped: "stopped";
         }>;
@@ -1269,8 +1269,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
                 index: z$1.ZodNumber;
                 label: z$1.ZodString;
                 state: z$1.ZodEnum<{
-                    running: "running";
                     failed: "failed";
+                    running: "running";
                     queued: "queued";
                     done: "done";
                     skipped: "skipped";
@@ -1315,17 +1315,17 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         taskType: z$1.ZodString;
         description: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             interrupted: "interrupted";
+            pending: "pending";
         }>;
         taskStatus: z$1.ZodEnum<{
-            pending: "pending";
-            running: "running";
-            paused: "paused";
             completed: "completed";
             failed: "failed";
+            paused: "paused";
+            pending: "pending";
+            running: "running";
             killed: "killed";
             stopped: "stopped";
         }>;
@@ -1341,8 +1341,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
                 index: z$1.ZodNumber;
                 label: z$1.ZodString;
                 state: z$1.ZodEnum<{
-                    running: "running";
                     failed: "failed";
+                    running: "running";
                     queued: "queued";
                     done: "done";
                     skipped: "skipped";
@@ -1414,10 +1414,10 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
     plan: z$1.ZodArray<z$1.ZodObject<{
         step: z$1.ZodString;
         status: z$1.ZodOptional<z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
             failed: "failed";
             active: "active";
+            pending: "pending";
         }>>;
     }, z$1.core.$strip>>;
     explanation: z$1.ZodOptional<z$1.ZodString>;
@@ -1757,9 +1757,9 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
         }>;
         permissionMode: z$1.ZodEnum<{
             readonly: "readonly";
+            full: "full";
             auto: "auto";
             "accept-edits": "accept-edits";
-            full: "full";
             "workspace-write": "workspace-write";
         }>;
     }, z$1.core.$strip>;
@@ -1820,8 +1820,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
     providerId: z$1.ZodString;
     providerRequestId: z$1.ZodString;
     status: z$1.ZodEnum<{
-        pending: "pending";
         interrupted: "interrupted";
+        pending: "pending";
         resolving: "resolving";
         resolved: "resolved";
     }>;
@@ -1872,8 +1872,8 @@ declare const threadEventSchema: z$1.ZodPipe<z$1.ZodUnknown, z$1.ZodUnion<readon
     providerId: z$1.ZodString;
     providerRequestId: z$1.ZodString;
     status: z$1.ZodEnum<{
-        pending: "pending";
         interrupted: "interrupted";
+        pending: "pending";
         resolving: "resolving";
         resolved: "resolved";
     }>;
@@ -1962,9 +1962,9 @@ declare const providerInfoSchema: z$1.ZodObject<{
         supportsUserQuestion: z$1.ZodBoolean;
         supportsFork: z$1.ZodBoolean;
         supportedPermissionModes: z$1.ZodArray<z$1.ZodEnum<{
+            full: "full";
             auto: "auto";
             "accept-edits": "accept-edits";
-            full: "full";
         }>>;
     }, z$1.core.$strip>;
     composerActions: z$1.ZodArray<z$1.ZodDiscriminatedUnion<[z$1.ZodObject<{
@@ -2042,8 +2042,8 @@ declare const threadTimelinePendingTodosSchema: z$1.ZodObject<{
         id: z$1.ZodString;
         text: z$1.ZodString;
         status: z$1.ZodEnum<{
-            pending: "pending";
             completed: "completed";
+            pending: "pending";
             in_progress: "in_progress";
         }>;
     }, z$1.core.$strip>>;
@@ -2145,9 +2145,9 @@ declare const threadQueuedMessageSchema: z$1.ZodObject<{
         ultra: "ultra";
     }>;
     permissionMode: z$1.ZodEnum<{
+        full: "full";
         auto: "auto";
         "accept-edits": "accept-edits";
-        full: "full";
     }>;
     serviceTier: z$1.ZodEnum<{
         default: "default";
@@ -2497,8 +2497,8 @@ declare const skillListResponseSchema: z$1.ZodObject<{
         name: z$1.ZodString;
         description: z$1.ZodNullable<z$1.ZodString>;
         provider: z$1.ZodNullable<z$1.ZodEnum<{
-            codex: "codex";
             "claude-code": "claude-code";
+            codex: "codex";
         }>>;
         scope: z$1.ZodEnum<{
             plugin: "plugin";
@@ -2843,8 +2843,8 @@ declare const environmentDiffFileResponseSchema: z$1.ZodObject<{
     path: z$1.ZodString;
     content: z$1.ZodString;
     contentEncoding: z$1.ZodEnum<{
-        utf8: "utf8";
         base64: "base64";
+        utf8: "utf8";
     }>;
     mimeType: z$1.ZodOptional<z$1.ZodString>;
     sizeBytes: z$1.ZodNumber;
@@ -2857,8 +2857,8 @@ declare const environmentArchiveThreadsResponseSchema: z$1.ZodObject<{
 type EnvironmentArchiveThreadsResponse = z$1.infer<typeof environmentArchiveThreadsResponseSchema>;
 declare const pullRequestMergeMethodSchema: z$1.ZodEnum<{
     merge: "merge";
-    squash: "squash";
     rebase: "rebase";
+    squash: "squash";
 }>;
 type PullRequestMergeMethod = z$1.infer<typeof pullRequestMergeMethodSchema>;
 declare const commitActionResponseSchema: z$1.ZodObject<{
@@ -2889,8 +2889,8 @@ declare const pullRequestMergeActionResponseSchema: z$1.ZodObject<{
     action: z$1.ZodLiteral<"pull_request_merge">;
     method: z$1.ZodEnum<{
         merge: "merge";
-        squash: "squash";
         rebase: "rebase";
+        squash: "squash";
     }>;
     message: z$1.ZodString;
 }, z$1.core.$strip>;
@@ -9388,8 +9388,8 @@ declare const threadTimelineResponseSchema: z$1.ZodObject<{
     activePromptMode: z$1.ZodNullable<z$1.ZodObject<{
         mode: z$1.ZodLiteral<"plan">;
         providerId: z$1.ZodEnum<{
-            codex: "codex";
             "claude-code": "claude-code";
+            codex: "codex";
         }>;
         prompt: z$1.ZodString;
     }, z$1.core.$strict>>;
@@ -12912,7 +12912,7 @@ interface BbPluginApi {
  * contribute one shared philosophy instead of maintaining product-specific
  * copies.
  */
-declare const GENERATED_APP_AGENT_PRINCIPLES = "## Generated-app operating principle: the human is the orchestrator, not the operator\n\nBuild generated interfaces and workflows so agents perform as much ongoing operational work as reasonably possible. The human should primarily set goals, approve important decisions, correct direction, and inspect outcomes\u2014not manually maintain fields, move records, fill forms, update statuses, or babysit pipelines.\n\nWhen designing or modifying any BB-generated app:\n- Prefer agent-maintained state over human data entry.\n- Prefer proactive monitoring, enrichment, research, classification, prioritization, follow-up preparation, and recommendations over passive record storage.\n- Treat Kanban boards, dashboards, metrics, queues, tables, and lists as human oversight surfaces, not the primary mechanism for maintaining truth.\n- If data can reasonably be inferred, researched, synchronized, or updated by an agent, do that instead of asking the human to enter it.\n- Surface exceptions, decisions, approvals, uncertainty, and high-value actions to the human.\n- Keep supporting evidence, provenance, history, and underlying structured data available to agents even when hidden from the human UI.\n- Optimize the rendered app around: \"What does the human need to see or decide next?\"\n- Avoid traditional CRM ergonomics where maintaining the system becomes work in itself.\n- Before adding any feature, ask internally: \"Can an agent own this task instead?\" If yes, design it agent-first.\n\nThe product-level measure of success is human capability amplification, not automation volume: increase the number and ambition of objectives one person can pursue, the situational awareness they can retain, the quality and speed of their decisions, and the operational surface area they can govern. Automation is useful only insofar as it creates that leverage.\n\nSales/GTM is one proving domain, not the platform boundary. These principles are domain-independent.\n\nA generated app is therefore an agent-operated system with a human oversight and decision surface\u2014not a passive database that transfers clerical work to the user.";
+declare const GENERATED_APP_AGENT_PRINCIPLES = "## Generated-app operating principle: the human is the orchestrator, not the operator\n\nBuild generated interfaces and workflows so agents perform as much ongoing operational work as reasonably possible. The human should primarily set goals, approve important decisions, correct direction, and inspect outcomes\u2014not manually maintain fields, move records, fill forms, update statuses, or babysit pipelines.\n\nWhen designing or modifying any BB-generated app:\n- Prefer agent-maintained state over human data entry.\n- Prefer proactive monitoring, enrichment, research, classification, prioritization, follow-up preparation, and recommendations over passive record storage.\n- Treat Kanban boards, dashboards, metrics, queues, tables, and lists as human oversight surfaces, not the primary mechanism for maintaining truth.\n- If data can reasonably be inferred, researched, synchronized, or updated by an agent, do that instead of asking the human to enter it.\n- Surface exceptions, decisions, approvals, uncertainty, and high-value actions to the human.\n- Keep supporting evidence, provenance, history, and underlying structured data available to agents even when hidden from the human UI.\n- Optimize the rendered app around: \"What does the human need to see or decide next?\"\n- Avoid traditional CRM ergonomics where maintaining the system becomes work in itself.\n- Before adding any feature, ask internally: \"Can an agent own this task instead?\" If yes, design it agent-first.\n\nThe product-level measure of success is human capability amplification, not automation volume: increase the number and ambition of objectives one person can pursue, the situational awareness they can retain, the quality and speed of their decisions, and the operational surface area they can govern. Automation is useful only insofar as it creates that leverage.\n\nSales/GTM is one proving domain, not the platform boundary. These principles are domain-independent. BB is not trying to replace every application with another application: it absorbs external products as capability adapters\u2014data sources, infrastructure, and action channels agents use toward human goals. Do not recreate a database, dashboard, workflow editor, CRM, inbox, or calendar merely because structured state or an integration exists. Keep that state agent-readable under the hood and project only goals, material understanding, decisions, exceptions, approvals, high-value actions, and outcomes where human attention creates value.\n\nA generated app is therefore an agent-operated system with a human oversight and decision surface\u2014not a passive database that transfers clerical work to the user.";
 
 /** Low-level, bounded, native composition vocabulary shared by generated tools. */
 type NativeViewLeaf = {
@@ -12963,6 +12963,16 @@ declare function validateGeneratedAppComposition(composition: NativeCompositionN
 
 /** Generic persistent autonomy contract for BB-generated tools. */
 type GeneratedToolSourceKind = "email" | "calendar" | "meeting-transcript" | "contacts" | "files" | "web" | "custom";
+type GeneratedToolCapabilityBinding = {
+    id: string;
+    role: "source" | "infrastructure" | "action-channel";
+    kind: string;
+    label: string;
+    enabled: boolean;
+    /** Adapter-owned resource reference; credentials remain in BB's connector layer. */
+    resource?: string;
+    scopes: string[];
+};
 /** A binding to a BB/shared connector. No generated tool embeds credentials. */
 type GeneratedToolSourceBinding = {
     id: string;
@@ -13025,12 +13035,19 @@ type GeneratedToolRecommendation = {
     rationale: string;
     evidence: string[];
     proposedAction?: string;
+    externalActionId?: string;
     status: "open" | "approved" | "rejected" | "resolved";
     createdAt: string;
     resolvedAt?: string;
 };
 type GeneratedToolAutonomyState = {
     policy: GeneratedToolAutonomyPolicy;
+    capabilities: GeneratedToolCapabilityBinding[];
+    goals: GeneratedGoalState[];
+    entities: GeneratedEntityMemory[];
+    opportunities: GeneratedOpportunity[];
+    externalActions: GeneratedExternalAction[];
+    outcomes: GeneratedOutcomeEvaluation[];
     sources: GeneratedToolSourceBinding[];
     signals: GeneratedToolSignal[];
     runs: GeneratedToolAutonomyRun[];
@@ -13043,13 +13060,29 @@ declare function buildGeneratedToolAutonomyPrompt(args: {
     title: string;
     policy: GeneratedToolAutonomyPolicy;
     sources?: GeneratedToolSourceBinding[];
+    capabilities?: GeneratedToolCapabilityBinding[];
 }): string;
 type GeneratedOperationsBrief = {
     generatedAt: string;
     changedWorkspaceIds: string[];
+    goals: Array<{
+        workspaceId: string;
+        goalId: string;
+        objective: string;
+        status: GeneratedGoalState["status"];
+        progress: number;
+        assessment?: string;
+    }>;
     handled: Array<{
         workspaceId: string;
         summary: string;
+    }>;
+    outcomes: Array<{
+        workspaceId: string;
+        outcomeId: string;
+        result: GeneratedOutcomeEvaluation["result"];
+        assessment: string;
+        observedAt: string;
     }>;
     attention: Array<{
         workspaceId: string;
@@ -13080,6 +13113,71 @@ type GeneratedToolCapabilityRequest = {
 };
 /** Central policy decision used by connector/action adapters before side effects. */
 declare function generatedToolCapabilityAllowed(permissions: GeneratedToolPermissionModel, request: GeneratedToolCapabilityRequest): boolean;
+type GeneratedGoalState = {
+    id: string;
+    objective: string;
+    successCriteria: string[];
+    status: "active" | "paused" | "achieved" | "blocked";
+    progress: number;
+    lastEvaluatedAt?: string;
+    assessment?: string;
+};
+type GeneratedEntityFact = {
+    key: string;
+    value: string;
+    confidence: number;
+    evidence: string[];
+    observedAt: string;
+};
+type GeneratedEntityMemory = {
+    ref: string;
+    kind: string;
+    label: string;
+    aliases: string[];
+    facts: GeneratedEntityFact[];
+    updatedAt: string;
+};
+type GeneratedOpportunity = {
+    id: string;
+    entityRefs: string[];
+    title: string;
+    hypothesis: string;
+    evidence: string[];
+    score: number;
+    status: "discovered" | "researching" | "qualified" | "advanced" | "dismissed" | "completed";
+    nextAction?: string;
+    discoveredAt: string;
+    updatedAt: string;
+};
+type GeneratedExternalAction = {
+    id: string;
+    idempotencyKey: string;
+    title: string;
+    actionType: string;
+    channelBindingId: string;
+    target: string;
+    payloadSummary: string;
+    rationale: string;
+    evidence: string[];
+    status: "proposed" | "approved" | "rejected" | "executing" | "succeeded" | "failed";
+    createdAt: string;
+    approvedAt?: string;
+    executionStartedAt?: string;
+    completedAt?: string;
+    attempts: number;
+    lastError?: string;
+    outcome?: string;
+};
+type GeneratedOutcomeEvaluation = {
+    id: string;
+    goalId?: string;
+    actionId?: string;
+    observedAt: string;
+    result: "positive" | "negative" | "neutral" | "unknown";
+    assessment: string;
+    evidence: string[];
+    followUp?: string;
+};
 
 export { DEFAULT_GENERATED_TOOL_AUTONOMY_POLICY, DEFAULT_GENERATED_TOOL_PERMISSION_MODEL, GENERATED_APP_AGENT_PRINCIPLES, PLUGIN_CLI_OUTPUT_MAX_BYTES, buildGeneratedOperationsBrief, buildGeneratedToolAutonomyPrompt, defineRpcContract, generatedToolCapabilityAllowed, validateGeneratedAppComposition };
-export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedOperationsBrief, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, JsonValue, MarkdownProps, NativeCompositionNode, NativeViewLeaf, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };
+export type { BbContext, BbNavigate, BbPluginApi, ComposerCustomization, ComposerPlusMenuItem, ComposerRichTextSpec, ComposerStructuredDraft, ComposerView, GeneratedEntityFact, GeneratedEntityMemory, GeneratedExternalAction, GeneratedGoalState, GeneratedOperationsBrief, GeneratedOpportunity, GeneratedOutcomeEvaluation, GeneratedToolAutonomyPolicy, GeneratedToolAutonomyRun, GeneratedToolAutonomyState, GeneratedToolCapabilityBinding, GeneratedToolCapabilityRequest, GeneratedToolPermissionModel, GeneratedToolRecommendation, GeneratedToolSignal, GeneratedToolSourceBinding, GeneratedToolSourceKind, JsonValue, MarkdownProps, NativeCompositionNode, NativeViewLeaf, NewThreadComposerProps, NewThreadRequest, PluginAgentConfiguration, PluginAgentConfigurationContext, PluginAgentToolContentPart, PluginAgentToolContext, PluginAgentToolExperimentalStatusLabels, PluginAgentToolRegistrationBase, PluginAgentToolResult, PluginAgentToolSelection, PluginAgents, PluginAppBuilder, PluginAppComposer, PluginAppContentScripts, PluginAppDefinition, PluginAppSetup, PluginAppSlots, PluginBackground, PluginCli, PluginCliCommandInfo, PluginCliContext, PluginCliExecutionResult, PluginCliOutputLimitError, PluginCliRegistration, PluginCliResult, PluginComposerApi, PluginComposerMention, PluginComposerScope, PluginComposerTextEffect, PluginComposerThreadRowStatus, PluginContentScriptContext, PluginContentScriptDisposer, PluginContentScriptRegistration, PluginEvents, PluginFileOpenerProps, PluginFileOpenerRegistration, PluginFileOpenerSource, PluginHomepageSectionProps, PluginHomepageSectionRegistration, PluginHosts, PluginHttp, PluginHttpAuthMode, PluginHttpHandler, PluginInteractionCancelReason, PluginInteractionRequest, PluginInteractionResult, PluginKvStorage, PluginLogger, PluginMentionItem, PluginMentionProviderRegistration, PluginMentionSearchContext, PluginMentionTrigger, PluginMessageActionContext, PluginMessageActionRegistration, PluginMessageActionThreadPanelOptions, PluginMessageDirectiveMessage, PluginMessageDirectiveOpenWorkspaceFile, PluginMessageDirectiveProps, PluginMessageDirectiveRegistration, PluginNavPanelProps, PluginNavPanelRegistration, PluginPendingInteractionProps, PluginPendingInteractionRegistration, PluginPendingInteractionView, PluginRealtime, PluginRealtimeConnectionState, PluginRpc, PluginRpcCallArgs, PluginRpcClient, PluginRpcContract, PluginRpcError, PluginRpcErrorCode, PluginRpcHandlers, PluginRpcIssuePathSegment, PluginRpcMethodContract, PluginRpcResult, PluginRpcValidationIssue, PluginSdkApp, PluginServerApi, PluginSettingDescriptor, PluginSettingDescriptors, PluginSettingValue, PluginSettings, PluginSettingsHandle, PluginSettingsSectionProps, PluginSettingsSectionRegistration, PluginSettingsState, PluginSettingsValues, PluginSharedPortTunnelIdentity, PluginSidebarFooterActionContext, PluginSidebarFooterActionProps, PluginSidebarFooterActionRegistration, PluginSidebarNavItem, PluginSidebarNavItemsProviderProps, PluginSidebarNavItemsRegistration, PluginSidebarNavItemsState, PluginSidebarProject, PluginSidebarPullRequest, PluginSidebarSplitPane, PluginSidebarThread, PluginSidebarThreadActions, PluginSidebarThreadActivity, PluginSidebarThreadIndicator, PluginSidebarThreadPullRequestState, PluginSidebarThreadSplit, PluginSidebarThreadsState, PluginSidebarWorkspaceKind, PluginStatusApi, PluginStorage, PluginThreadEventHandler, PluginThreadEventName, PluginThreadEventPayloads, PluginThreadHeaderActionProps, PluginThreadHeaderActionRegistration, PluginThreadListProps, PluginThreadListRegistration, PluginThreadPanelActionContext, PluginThreadPanelActionRegistration, PluginThreadPanelProps, PluginUi, StandardSchemaV1, StandardSchemaV1InferInput, StandardSchemaV1InferOutput, StandardSchemaV1Issue, StandardSchemaV1Result, ThreadChatMessageAction, ThreadChatMessageReference, ThreadChatProps };

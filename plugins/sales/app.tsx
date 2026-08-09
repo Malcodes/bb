@@ -285,6 +285,8 @@ function AutonomyPanel({
   const open = (state?.recommendations ?? []).filter(
     (item) => item.status === "open",
   );
+  const activeGoal = state?.goals.find((goal) => goal.status === "active");
+  const latestOutcome = state?.outcomes[0];
   const lastRun = state?.runs[0];
   return (
     <aside
@@ -301,7 +303,9 @@ function AutonomyPanel({
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-semibold">Agent operator</div>
           <div className="truncate text-[10px] text-muted-foreground">
-            {state?.policy.goal || "Monitoring workspace state"}
+            {activeGoal?.objective ||
+              state?.policy.goal ||
+              "Working toward your goal"}
           </div>
         </div>
         <span className="text-[10px] text-muted-foreground">
@@ -374,9 +378,24 @@ function AutonomyPanel({
             </section>
           ))}
         </div>
+      ) : latestOutcome ? (
+        <div className="flex items-start gap-2 px-3 py-2.5">
+          <Icon
+            name={safeIcon("CheckCircle", "AlertCircle")}
+            className="mt-0.5 size-3.5 shrink-0 text-emerald-600"
+          />
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+              Latest outcome
+            </div>
+            <p className="mt-0.5 text-[11px] leading-4 text-foreground/75">
+              {latestOutcome.assessment}
+            </p>
+          </div>
+        </div>
       ) : (
         <p className="px-3 py-2 text-[11px] text-muted-foreground">
-          No open exceptions or decisions.
+          No decision or exception needs your attention.
         </p>
       )}
     </aside>
