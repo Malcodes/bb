@@ -79,6 +79,12 @@ export const BUILTIN_PLUGINS = [
     category: "Interface",
   },
   {
+    name: "google-workspace",
+    pluginId: "google-workspace",
+    defaultEnabled: true,
+    category: "Context & knowledge",
+  },
+  {
     name: "selfops",
     pluginId: "selfops",
     defaultEnabled: true,

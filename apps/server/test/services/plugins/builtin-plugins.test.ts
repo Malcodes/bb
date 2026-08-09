@@ -201,6 +201,7 @@ describe("builtin plugin reconciliation", () => {
       ["automations", "Clock"],
       ["connect", "Smartphone"],
       ["custom-instructions", "EditFile"],
+      ["google-workspace", "Mail01"],
       ["inline-vis", "AppWindow"],
       ["sales", "ChartLineData01"],
       ["secrets", "Lock"],

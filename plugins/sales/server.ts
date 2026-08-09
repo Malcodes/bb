@@ -65,6 +65,7 @@ async function emitSelfOpsObservation(
 const OPERATIONS_SIGNALS_KEY = "generated-operations-signals";
 const SIGNAL_CHANNEL = "workspaces-changed";
 const GOOGLE_CURSOR_KEY = "google-work-cursor";
+const GOOGLE_CONNECTOR_PLUGIN_ID = "google-workspace";
 const pinnedItemSchema = z
   .object({
     id: z.string(),
@@ -235,6 +236,33 @@ export default async function plugin(
       };
     }
     const settings = await googleSettings.get();
+    const calendarIds = settings.googleCalendarIds
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    // Preferred: the first-party google-workspace connector owns OAuth and
+    // refresh; a fresh token is vended per cycle so expiry never strands a
+    // long-lived transport.
+    try {
+      const vended = await bb.sdk.plugins.callRpc({
+        pluginId: GOOGLE_CONNECTOR_PLUGIN_ID,
+        method: "accessToken",
+        input: null,
+        outputSchema: z.object({
+          token: z.string(),
+          expiresAt: z.string(),
+          email: z.string(),
+        }),
+      });
+      return {
+        transport: new GoogleApiWorkTransport(vended.token, vended.email),
+        userEmail: vended.email,
+        calendarIds,
+      };
+    } catch {
+      // Connector absent, unconnected, or unhealthy — fall through to the
+      // manual settings token (or no Google at all).
+    }
     if (!settings.googleAccessToken || !settings.googleUserEmail) return null;
     return {
       transport: new GoogleApiWorkTransport(
@@ -242,10 +270,7 @@ export default async function plugin(
         settings.googleUserEmail,
       ),
       userEmail: settings.googleUserEmail,
-      calendarIds: settings.googleCalendarIds
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
+      calendarIds,
     };
   }
   // Serialize all read-modify-write transactions. Revisions then reliably
