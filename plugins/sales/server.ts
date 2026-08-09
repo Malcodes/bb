@@ -19,6 +19,7 @@ import {
 import {
   createWorkspaceInputSchema,
   mutationSchema,
+  presentationMutationSchema,
   workspaceSchema,
 } from "./src/schemas.js";
 import { SALES_AGENT_INSTRUCTIONS } from "./src/instructions.js";
@@ -104,6 +105,11 @@ export const salesRpcContract = defineRpcContract({
           .object({
             observe: z.object({ sourceIds: z.array(z.string()) }).strict(),
             internalState: z.enum(["automatic", "recommend-only"]),
+            evolvePresentation: z.enum([
+              "automatic",
+              "recommend-only",
+              "disabled",
+            ]),
             prepareExternalActions: z.enum([
               "automatic",
               "recommend-only",
@@ -171,6 +177,7 @@ export default async function plugin(bb: BbPluginApi) {
           .map((source) => source.id),
       },
       internalState: legacy.policy.internalActions ?? "automatic",
+      evolvePresentation: "automatic",
       prepareExternalActions: "automatic",
       executeConsequentialActions:
         legacy.policy.externalActions ?? "require-approval",
@@ -636,6 +643,11 @@ export default async function plugin(bb: BbPluginApi) {
           .object({
             observe: z.object({ sourceIds: z.array(z.string()) }).strict(),
             internalState: z.enum(["automatic", "recommend-only"]),
+            evolvePresentation: z.enum([
+              "automatic",
+              "recommend-only",
+              "disabled",
+            ]),
             prepareExternalActions: z.enum([
               "automatic",
               "recommend-only",
@@ -666,6 +678,63 @@ export default async function plugin(bb: BbPluginApi) {
       );
     },
   });
+  bb.agents.registerTool({
+    name: "generated_tool_evolve_presentation",
+    description:
+      "Safely evolve a generated tool's human-facing definition: add/update/hide/remove/reorder/resize modules and replace projections, without changing operational collections or BB runtime code.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        rationale: z.string().min(1).max(2000),
+        mutations: z.array(presentationMutationSchema).min(1).max(24),
+      })
+      .strict(),
+    async execute({ workspaceId, rationale, mutations }) {
+      const updated = await updateWorkspace(workspaceId, (workspace) => {
+        const state = autonomy(workspace);
+        if (!state.policy.enabled) {
+          throw new Error("generated-tool autonomy is disabled");
+        }
+        if (
+          !generatedToolCapabilityAllowed(state.policy.permissions, {
+            capability: "evolve-presentation",
+          })
+        ) {
+          throw new Error(
+            "operator has recommend-only or disabled presentation permission; surface a recommendation instead",
+          );
+        }
+        for (const mutation of mutations) {
+          if (mutation.workspaceId !== workspaceId)
+            throw new Error("mutation workspaceId mismatch");
+          if (!applyMutation(workspace, mutation as Mutation)) {
+            throw new Error(
+              `presentation mutation could not be applied: ${mutation.op}`,
+            );
+          }
+        }
+        if (workspace.views.length > 24)
+          throw new Error("generated tool exceeds the 24-module limit");
+        if (!workspace.views.some((view) => view.visible !== false)) {
+          throw new Error(
+            "generated tool must retain at least one visible module",
+          );
+        }
+        state.recommendations.unshift({
+          id: newId("rec"),
+          kind: "recommendation",
+          title: "Presentation evolved",
+          rationale,
+          evidence: ["generated-tool-definition"],
+          status: "resolved",
+          createdAt: new Date().toISOString(),
+          resolvedAt: new Date().toISOString(),
+        });
+      });
+      return JSON.stringify(toJson(updated));
+    },
+  });
+
   bb.agents.registerTool({
     name: "generated_tool_report_recommendation",
     description:
@@ -711,6 +780,7 @@ export default async function plugin(bb: BbPluginApi) {
       "sales_mutate_workspace",
       "generated_tool_configure_autonomy",
       "generated_tool_report_recommendation",
+      "generated_tool_evolve_presentation",
       "generated_operations_ingest_signal",
       "generated_operations_read_brief",
     ],

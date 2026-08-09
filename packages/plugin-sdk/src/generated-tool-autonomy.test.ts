@@ -27,6 +27,7 @@ describe("generated operations autonomy contract", () => {
         permissions: {
           observe: { sourceIds: ["meetings"] },
           internalState: "automatic",
+          evolvePresentation: "automatic",
           prepareExternalActions: "automatic",
           executeConsequentialActions: "require-approval",
         },
@@ -35,6 +36,7 @@ describe("generated operations autonomy contract", () => {
     expect(prompt).toContain("meeting-transcript");
     expect(prompt).toContain("Observation does not imply mutation");
     expect(prompt).toContain("Preparing a draft does not authorize execution");
+    expect(prompt).toContain("never modify BB platform/runtime infrastructure");
     expect(prompt).toContain("individual proposal has explicit human approval");
     expect(prompt).not.toMatch(/sales|job search/i);
   });
@@ -43,6 +45,7 @@ describe("generated operations autonomy contract", () => {
     const permissions = {
       observe: { sourceIds: ["calendar"] },
       internalState: "recommend-only" as const,
+      evolvePresentation: "automatic" as const,
       prepareExternalActions: "automatic" as const,
       executeConsequentialActions: "require-approval" as const,
     };
@@ -63,6 +66,11 @@ describe("generated operations autonomy contract", () => {
         capability: "modify-internal-state",
       }),
     ).toBe(false);
+    expect(
+      generatedToolCapabilityAllowed(permissions, {
+        capability: "evolve-presentation",
+      }),
+    ).toBe(true);
     expect(
       generatedToolCapabilityAllowed(permissions, {
         capability: "prepare-external-action",

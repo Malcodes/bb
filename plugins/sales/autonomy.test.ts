@@ -74,6 +74,7 @@ describe("generated-tool proactive operator", () => {
       permissions: {
         observe: { sourceIds: ["mail-main"] },
         internalState: "automatic",
+        evolvePresentation: "automatic",
         prepareExternalActions: "automatic",
         executeConsequentialActions: "require-approval",
       },

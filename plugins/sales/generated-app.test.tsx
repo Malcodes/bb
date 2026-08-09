@@ -153,6 +153,86 @@ describe("native generated-app vocabulary", () => {
     expect(lane?.className).toContain("max-h-[min(54vh,500px,100%)]");
     expect(lane?.className).not.toContain("flex-1");
   });
+
+  it("renders a decision queue as direct Yes / No / Comment interactions", () => {
+    const mutate = vi.fn();
+    const workspace: Workspace = {
+      id: "ws_decisions",
+      originThreadId: "thr_1",
+      pinnedAt: null,
+      navOrder: 0,
+      revision: 1,
+      title: "Decision Surface",
+      createdAt: "2026-08-09T00:00:00Z",
+      updatedAt: "2026-08-09T00:00:00Z",
+      collections: [
+        {
+          id: "decisions",
+          name: "Decisions",
+          fields: ["question", "context", "decision", "comment"],
+          rows: [
+            {
+              id: "d1",
+              question: "Advance Acme?",
+              context: "Evidence verified",
+              decision: "",
+              comment: "",
+            },
+          ],
+        },
+      ],
+      views: [
+        {
+          id: "decision-queue",
+          primitive: "decision",
+          title: "Decision Queue",
+          collectionId: "decisions",
+          config: {
+            decision: {
+              promptField: "question",
+              contextFields: ["context"],
+              statusField: "decision",
+              commentField: "comment",
+              options: [
+                { label: "Yes", value: "yes", tone: "success" },
+                { label: "No", value: "no", tone: "danger" },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    render(
+      <ViewRenderer
+        view={workspace.views[0]!}
+        workspace={workspace}
+        mutate={mutate}
+      />,
+    );
+    expect(screen.getByText("Advance Acme?")).toBeDefined();
+    expect(screen.getByText("Evidence verified")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+    expect(mutate).toHaveBeenCalledWith([
+      expect.objectContaining({
+        op: "patchRow",
+        rowId: "d1",
+        patch: { decision: "yes" },
+      }),
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Comment" }));
+    fireEvent.change(screen.getByPlaceholderText("Add context for agents…"), {
+      target: { value: "Proceed only after references." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(mutate).toHaveBeenLastCalledWith([
+      expect.objectContaining({
+        op: "patchRow",
+        rowId: "d1",
+        patch: { comment: "Proceed only after references." },
+      }),
+    ]);
+  });
 });
 
 it("recomputes declarative metrics from the current persistent collection rows", () => {

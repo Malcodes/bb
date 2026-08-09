@@ -177,6 +177,29 @@ export const viewConfigSchema = z
         }),
       )
       .optional(),
+    decision: z
+      .object({
+        promptField: z.string().min(1),
+        contextFields: z.array(z.string().min(1)).max(6).optional(),
+        statusField: z.string().min(1),
+        commentField: z.string().min(1).optional(),
+        options: z
+          .array(
+            z
+              .object({
+                label: z.string().min(1),
+                value: z.string().min(1),
+                tone: z
+                  .enum(["default", "success", "danger", "warning"])
+                  .optional(),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(6),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -189,6 +212,7 @@ export const viewSchema = z.object({
     "list",
     "timeline",
     "metrics",
+    "decision",
   ]),
   title: z.string().min(1),
   visible: z.boolean().optional(),
@@ -220,6 +244,7 @@ const sourceBindingSchema = z.object({
 const permissionModelSchema = z.object({
   observe: z.object({ sourceIds: z.array(z.string()) }),
   internalState: z.enum(["automatic", "recommend-only"]),
+  evolvePresentation: z.enum(["automatic", "recommend-only", "disabled"]),
   prepareExternalActions: z.enum(["automatic", "recommend-only", "disabled"]),
   executeConsequentialActions: z.enum(["require-approval", "disabled"]),
 });
@@ -301,6 +326,46 @@ const wsRef = {
   collectionId: z.string().min(1),
 };
 
+export const presentationMutationSchema = z.discriminatedUnion("op", [
+  z
+    .object({
+      op: z.literal("reorderViews"),
+      workspaceId: z.string().min(1),
+      viewIds: z.array(z.string()),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setViewVisibility"),
+      workspaceId: z.string().min(1),
+      viewId: z.string().min(1),
+      visible: z.boolean(),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("removeView"),
+      workspaceId: z.string().min(1),
+      viewId: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setViewDefinition"),
+      workspaceId: z.string().min(1),
+      view: viewSchema,
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setViewLayout"),
+      workspaceId: z.string().min(1),
+      viewId: z.string().min(1),
+      height: z.number().min(280).max(720).optional(),
+    })
+    .strict(),
+]);
+
 export const mutationSchema = z.discriminatedUnion("op", [
   z
     .object({
@@ -343,6 +408,13 @@ export const mutationSchema = z.discriminatedUnion("op", [
       op: z.literal("removeView"),
       workspaceId: z.string().min(1),
       viewId: z.string().min(1),
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("setViewDefinition"),
+      workspaceId: z.string().min(1),
+      view: viewSchema,
     })
     .strict(),
   z

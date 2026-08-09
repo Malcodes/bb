@@ -24,6 +24,8 @@ export type GeneratedToolPermissionModel = {
   observe: { sourceIds: string[] };
   /** Reconcile evidence into agent-maintained state. */
   internalState: "automatic" | "recommend-only";
+  /** Evolve the generated tool definition/presentation within host-safe primitives. */
+  evolvePresentation: "automatic" | "recommend-only" | "disabled";
   /** Draft messages/forms/transactions without committing them externally. */
   prepareExternalActions: "automatic" | "recommend-only" | "disabled";
   /** The hard boundary: execution is either disabled or individually approved. */
@@ -88,6 +90,7 @@ export const DEFAULT_GENERATED_TOOL_PERMISSION_MODEL: GeneratedToolPermissionMod
   {
     observe: { sourceIds: [] },
     internalState: "automatic",
+    evolvePresentation: "automatic",
     prepareExternalActions: "automatic",
     executeConsequentialActions: "require-approval",
   };
@@ -123,12 +126,13 @@ ${sources.length ? sources.map((source) => `- ${source.id}: ${source.kind} (${so
 Permissions:
 - Observe: only the source bindings listed above.
 - Internal state: ${args.policy.permissions.internalState}.
+- Evolve generated-tool presentation: ${args.policy.permissions.evolvePresentation}.
 - Prepare external actions: ${args.policy.permissions.prepareExternalActions}.
 - Execute consequential external actions: ${args.policy.permissions.executeConsequentialActions}.
 
 The workspace is a human-facing projection of agent-maintained state, not an isolated database. Consume available connector events and information, normalize evidence, deduplicate it by source/fingerprint, and reconcile it into maintained state. Source, research, verify, enrich, classify, prioritize, and advance records when supported by evidence. Surface material recommendations, uncertainty, stale data, exceptions, and decisions.
 
-Never bypass the permission levels. Observation does not imply mutation. Internal mutation does not imply permission to act externally. Preparing a draft does not authorize execution. Never perform a consequential external action (sending messages, applying, purchasing, publishing, committing on the human's behalf, or changing an external system) unless its individual proposal has explicit human approval; when execution is disabled, do not execute even after preparation. Do not ask the human to perform clerical maintenance. End with a concise run summary.`;
+Never bypass the permission levels. Observation does not imply mutation. Internal mutation does not imply permission to evolve the human-facing tool definition or act externally. Presentation evolution is limited to generated-tool definitions and host-safe primitives; never modify BB platform/runtime infrastructure unless explicitly asked in a development context. Preparing a draft does not authorize execution. Never perform a consequential external action (sending messages, applying, purchasing, publishing, committing on the human's behalf, or changing an external system) unless its individual proposal has explicit human approval; when execution is disabled, do not execute even after preparation. Do not ask the human to perform clerical maintenance. End with a concise run summary.`;
 }
 
 export type GeneratedOperationsBrief = {
@@ -191,6 +195,7 @@ export function buildGeneratedOperationsBrief(
 export type GeneratedToolCapabilityRequest =
   | { capability: "observe"; sourceId: string }
   | { capability: "modify-internal-state" }
+  | { capability: "evolve-presentation" }
   | { capability: "prepare-external-action" }
   | {
       capability: "execute-consequential-action";
@@ -207,6 +212,8 @@ export function generatedToolCapabilityAllowed(
       return permissions.observe.sourceIds.includes(request.sourceId);
     case "modify-internal-state":
       return permissions.internalState === "automatic";
+    case "evolve-presentation":
+      return permissions.evolvePresentation === "automatic";
     case "prepare-external-action":
       return permissions.prepareExternalActions === "automatic";
     case "execute-consequential-action":

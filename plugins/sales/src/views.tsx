@@ -23,6 +23,7 @@ import { Button } from "@bb/shared-ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@bb/shared-ui/card";
 import { Input } from "@bb/shared-ui/input";
 import { Icon } from "@bb/shared-ui/icon";
+import { cn } from "@bb/shared-ui/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -1095,6 +1096,148 @@ function TimelineView({
   );
 }
 
+function DecisionView({
+  view,
+  collection,
+  mutate,
+  workspaceId,
+}: {
+  view: View;
+  collection: Collection;
+  mutate: Mutate;
+  workspaceId: string;
+}) {
+  const decision = view.config.decision;
+  const [commentingId, setCommentingId] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
+  if (!decision) return null;
+  const pending = collection.rows.filter(
+    (row) => !valueText(row[decision.statusField]),
+  );
+  const rows = pending.length ? pending : collection.rows;
+  const patch = (rowId: string, values: Record<string, RowValue>) =>
+    mutate([
+      {
+        op: "patchRow",
+        workspaceId,
+        collectionId: collection.id,
+        rowId,
+        patch: values,
+      },
+    ]);
+  return (
+    <div className="divide-y divide-border/60">
+      {rows.map((row) => {
+        const status = valueText(row[decision.statusField]);
+        return (
+          <section key={row.id} className="px-3 py-2.5">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium leading-5">
+                  {valueText(row[decision.promptField]) || "Decision required"}
+                </div>
+                {decision.contextFields?.length ? (
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+                    {decision.contextFields.map((field) =>
+                      valueText(row[field]) ? (
+                        <span key={field}>
+                          <span className="font-medium text-foreground/60">
+                            {fieldLabel(field, collection.fieldMeta?.[field])}:
+                          </span>{" "}
+                          {valueText(row[field])}
+                        </span>
+                      ) : null,
+                    )}
+                  </div>
+                ) : null}
+                {status ? (
+                  <div className="mt-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                    Decision: {status}
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                {decision.options.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={
+                      option.tone === "danger"
+                        ? "ghost"
+                        : option.tone === "success"
+                          ? "default"
+                          : "outline"
+                    }
+                    className={cn(
+                      "h-7 px-2.5 text-[10px]",
+                      option.tone === "danger" &&
+                        "text-destructive hover:bg-destructive/10 hover:text-destructive",
+                    )}
+                    onClick={() =>
+                      patch(row.id, { [decision.statusField]: option.value })
+                    }
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+                {decision.commentField ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2.5 text-[10px]"
+                    onClick={() => {
+                      setCommentingId(row.id);
+                      setComment(valueText(row[decision.commentField!]));
+                    }}
+                  >
+                    Comment
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            {commentingId === row.id && decision.commentField ? (
+              <div className="mt-2 flex gap-1.5">
+                <Input
+                  autoFocus
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Add context for agents…"
+                  className="h-8 text-xs"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      patch(row.id, { [decision.commentField!]: comment });
+                      setCommentingId(null);
+                    }
+                    if (event.key === "Escape") setCommentingId(null);
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 px-3 text-xs"
+                  onClick={() => {
+                    patch(row.id, { [decision.commentField!]: comment });
+                    setCommentingId(null);
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+      {rows.length === 0 ? (
+        <p className="px-3 py-3 text-[11px] text-muted-foreground">
+          No decisions need attention.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function metricMatches(
   row: Row,
   filters: NonNullable<NonNullable<View["config"]["metrics"]>[number]["where"]>,
@@ -1246,5 +1389,14 @@ export function ViewRenderer({
       );
     case "timeline":
       return <TimelineView view={view} collection={collection} />;
+    case "decision":
+      return (
+        <DecisionView
+          view={view}
+          collection={collection}
+          mutate={mutate}
+          workspaceId={workspace.id}
+        />
+      );
   }
 }

@@ -187,14 +187,14 @@ function WorkspaceModule({
     setDraftHeight(view.layout?.height);
     draftRef.current = view.layout?.height;
   }, [view.layout?.height]);
+  const resizable = view.primitive !== "metrics";
   const style = {
     transform: CSS.Translate.toString(sortable.transform),
     transition: sortable.transition,
-    height: draftHeight,
+    height: resizable ? draftHeight : undefined,
     zIndex: sortable.isDragging ? 20 : undefined,
     opacity: sortable.isDragging ? 0.72 : undefined,
   };
-  const resizable = view.primitive !== "metrics";
 
   const beginResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -247,7 +247,7 @@ function WorkspaceModule({
         <span className="truncate text-[11px] font-semibold text-foreground/75">
           {view.title}
         </span>
-        {view.layout?.height ? (
+        {resizable && view.layout?.height ? (
           <button
             type="button"
             onClick={() => onResize(undefined)}

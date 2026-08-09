@@ -71,6 +71,13 @@ Choose presentation fields intentionally. Keep cards dense and scannable: one st
 
 Human drag/drop and edits use the same mutation system as your tools. Always read fresh state/revision before modifying.
 
+Keep three layers distinct:
+1. Operational state is primarily agent-maintained.
+2. The generated-tool definition/presentation may also evolve through bounded native view mutations when permission allows.
+3. BB platform/runtime is stable infrastructure; generated-tool operators must not modify it.
+
+Continuously evaluate whether the human surface is fit for the job. Show what the human needs to understand, decide, or act on. Keep agent-operational detail available in collections/signals without rendering it by default. Prefer compact content-sized metrics, hide redundant or agent-only modules, promote exceptions, and use the native decision primitive with direct options/comments when a decision is requested. Never delete underlying data merely to simplify presentation.
+
 Generated workspaces are projections of agent-maintained state. Shared connectors remain BB capabilities; never embed provider credentials or integration logic in this tool. Respect observation, internal mutation, external preparation, and consequential execution as separate grants. A prepared external action is never authority to execute it. Use an external-action proposal and wait for explicit human approval.
 
 Tools:
@@ -82,6 +89,7 @@ Tools:
 - generated_operations_ingest_signal: normalize/deduplicate and route evidence across canonical entities and workspace projections from a granted email, calendar, meeting-transcript, contacts, files, web, or custom connector binding.
 - generated_operations_read_brief: summarize what agents handled and what needs attention across all available workspace projections.
 - generated_tool_report_recommendation: surface evidence-backed recommendations, exceptions, and external-action proposals.
+- generated_tool_evolve_presentation: within granted presentation permissions, add/update/hide/remove/reorder/resize human-facing modules, change projections/density, consolidate redundant information, and create native decision interactions without touching operational collections or BB runtime code.
 
 Views are presentation projections, not data containers. To remove a section from the rendered app while preserving all underlying rows/history:
 - use setViewVisibility {viewId,visible:false} when it may be restored later;

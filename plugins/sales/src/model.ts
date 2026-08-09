@@ -134,6 +134,18 @@ export type ViewConfig = {
   metrics?: MetricComputation[];
   /** Reusable native presentation vocabulary; currently richest for Kanban. */
   presentation?: KanbanPresentation;
+  /** Decision queue: fields and bounded human actions rendered without a thread round-trip. */
+  decision?: {
+    promptField: string;
+    contextFields?: string[];
+    statusField: string;
+    commentField?: string;
+    options: Array<{
+      label: string;
+      value: string;
+      tone?: "default" | "success" | "danger" | "warning";
+    }>;
+  };
 };
 
 export type ViewLayout = {
@@ -143,7 +155,14 @@ export type ViewLayout = {
 
 export type View = {
   id: string;
-  primitive: "kanban" | "table" | "cards" | "list" | "timeline" | "metrics";
+  primitive:
+    | "kanban"
+    | "table"
+    | "cards"
+    | "list"
+    | "timeline"
+    | "metrics"
+    | "decision";
   title: string;
   /** Presentation visibility only; hidden views keep collections and history. */
   visible?: boolean;
@@ -204,6 +223,7 @@ export type Mutation =
       visible: boolean;
     }
   | { op: "removeView"; workspaceId: string; viewId: string }
+  | { op: "setViewDefinition"; workspaceId: string; view: View }
   | {
       op: "setViewLayout";
       workspaceId: string;
@@ -359,6 +379,21 @@ export function applyMutation(ws: Workspace, m: Mutation): boolean {
     if (!view) return false;
     if ((view.visible !== false) === m.visible) return false;
     view.visible = m.visible;
+    return true;
+  }
+  if (m.op === "setViewDefinition") {
+    if (m.workspaceId !== ws.id) return false;
+    if (
+      m.view.collectionId &&
+      !ws.collections.some(
+        (collection) => collection.id === m.view.collectionId,
+      )
+    ) {
+      return false;
+    }
+    const index = ws.views.findIndex((candidate) => candidate.id === m.view.id);
+    if (index === -1) ws.views.push(structuredClone(m.view));
+    else ws.views[index] = structuredClone(m.view);
     return true;
   }
   if (m.op === "removeView") {
