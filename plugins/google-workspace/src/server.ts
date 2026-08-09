@@ -29,6 +29,7 @@ import {
 } from "./oauth.js";
 import { ConnectorStore } from "./store.js";
 import { googleWorkspaceRpcContract } from "./rpc.js";
+import { registerGoogleReadTools } from "./read-tools.js";
 
 const SELFOPS_PLUGIN_ID = "selfops";
 const REFRESH_SKEW_MS = 60_000;
@@ -323,6 +324,11 @@ export default async function plugin(
       return currentAccessToken();
     },
   });
+
+  // Read-only Gmail/Calendar agent tools for ordinary threads. They vend
+  // tokens through currentAccessToken() — the same refresh path as the
+  // connector RPC — and never expose the refresh token to agent state.
+  registerGoogleReadTools(bb, currentAccessToken);
 
   // Proactive token maintenance: keeps access tokens warm and — more
   // importantly — detects revocation/expiry within 30 minutes instead of at
