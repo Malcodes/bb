@@ -15,12 +15,14 @@ export const GMAIL_PROFILE_URL =
 /**
  * Minimum scopes for the existing GoogleWork adapters:
  * - gmail.readonly — history/list/get ingestion (pollGoogleWork)
- * - gmail.send — approval-gated replies (executeGoogleWorkAction)
- * - calendar.events — read + approval-gated event updates
+ * - gmail.send — approval-gated sends (sales executeGoogleWorkAction only)
+ * - gmail.compose — draft create/read/update/delete (drafts never send)
+ * - calendar.events — read + solo-autonomous / shared-approval-gated writes
  */
 export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.compose",
   "https://www.googleapis.com/auth/calendar.events",
 ] as const;
 

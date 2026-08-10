@@ -279,9 +279,23 @@ export function registerGoogleReadTools(
       "gmail_list_recent",
       "gmail_search",
       "gmail_read_thread",
+      "gmail_create_draft",
+      "gmail_update_draft",
+      "gmail_list_drafts",
+      "gmail_read_draft",
+      "gmail_delete_draft",
       "calendar_list_events",
       "calendar_search_events",
+      "calendar_create_event",
+      "calendar_update_event",
+      "calendar_move_event",
+      "calendar_cancel_event",
+      "calendar_add_attendee",
+      "calendar_remove_attendee",
+      "calendar_find_free_time",
     ],
     skills: [],
+    instructions:
+      "Google Workspace: read/search Gmail and Calendar freely. Drafts may be created, edited, and deleted autonomously — never send email (sending is only possible via the sales approval path). Calendar: events involving only the user may be created, moved, resized, or cancelled autonomously (keep event ids stable; prefer editing over recreating; respect time zones, all-day events, and buffers). ANY change affecting another person — invitations, attendee changes, cancellations, material reschedules of shared meetings — MUST go through the tool's approval step; never retry after a decline. Use calendar_find_free_time before proposing meeting times. Every change is audit-logged.",
   }));
 }

@@ -30,6 +30,9 @@ import {
 import { ConnectorStore } from "./store.js";
 import { googleWorkspaceRpcContract } from "./rpc.js";
 import { registerGoogleReadTools } from "./read-tools.js";
+import { registerGmailDraftTools } from "./draft-tools.js";
+import { registerCalendarWriteTools } from "./calendar-write-tools.js";
+import { AuditLog } from "./audit.js";
 
 const SELFOPS_PLUGIN_ID = "selfops";
 const REFRESH_SKEW_MS = 60_000;
@@ -192,6 +195,15 @@ export default async function plugin(
     }
   }
 
+  function grantedScopes(credential: { scopes: string }): Set<string> {
+    return new Set(credential.scopes.split(/\s+/).filter(Boolean));
+  }
+
+  function hasRequiredScopes(credential: { scopes: string }): boolean {
+    const granted = grantedScopes(credential);
+    return GOOGLE_SCOPES.every((scope) => granted.has(scope));
+  }
+
   bb.http.route(
     "GET",
     CALLBACK_PATH,
@@ -275,6 +287,9 @@ export default async function plugin(
         lastError: health.lastError ?? null,
         consecutiveFailures: health.consecutiveFailures,
         reconnectRequired: health.reconnectRequired,
+        scopeUpgradeRequired:
+          credential !== null && !hasRequiredScopes(credential),
+        requiredScopes: [...GOOGLE_SCOPES],
         redirectUri: redirectUri(),
       };
     },
@@ -320,15 +335,26 @@ export default async function plugin(
       bb.realtime.publish("connection-changed", { connected: false });
       return { revoked };
     },
+    async auditTrail(input) {
+      return { entries: audit.list(input.limit) };
+    },
     async accessToken() {
       return currentAccessToken();
     },
   });
 
+  const audit = new AuditLog(bb.storage);
+
   // Read-only Gmail/Calendar agent tools for ordinary threads. They vend
   // tokens through currentAccessToken() — the same refresh path as the
   // connector RPC — and never expose the refresh token to agent state.
   registerGoogleReadTools(bb, currentAccessToken);
+
+  // Gmail drafts (create/update/list/read/delete — never send) and Calendar
+  // writes (solo direct, other-person-affecting approval-gated), all with
+  // an audit trail and the same token path.
+  registerGmailDraftTools(bb, currentAccessToken, audit, now);
+  registerCalendarWriteTools(bb, currentAccessToken, audit, now);
 
   // Proactive token maintenance: keeps access tokens warm and — more
   // importantly — detects revocation/expiry within 30 minutes instead of at

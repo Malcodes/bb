@@ -23,6 +23,10 @@ export const connectorStatusSchema = z.object({
   consecutiveFailures: z.number(),
   /** Refresh token rejected (invalid_grant): user must reconnect. */
   reconnectRequired: z.boolean(),
+  /** Stored grant predates the current scope set: reconnect to upgrade consent. */
+  scopeUpgradeRequired: z.boolean(),
+  /** Scopes this connector now requires (for the settings UI hint). */
+  requiredScopes: z.array(z.string()),
   /** Loopback redirect URI to allowlist in the Google OAuth client. */
   redirectUri: z.string(),
 });
@@ -44,6 +48,22 @@ export const googleWorkspaceRpcContract = defineRpcContract({
     output: z.object({
       /** True when Google confirmed revocation (false = local wipe only). */
       revoked: z.boolean(),
+    }),
+  },
+  auditTrail: {
+    input: z.object({
+      limit: z.number().int().min(1).max(200).default(50),
+    }),
+    output: z.object({
+      entries: z.array(
+        z.object({
+          at: z.string(),
+          action: z.string(),
+          target: z.string(),
+          reason: z.string(),
+          outcome: z.string(),
+        }),
+      ),
     }),
   },
   accessToken: {

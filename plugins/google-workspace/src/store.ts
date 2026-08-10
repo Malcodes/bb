@@ -54,6 +54,14 @@ export class ConnectorStore {
         key TEXT PRIMARY KEY,
         value TEXT
       )`,
+      `CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at TEXT NOT NULL,
+        action TEXT NOT NULL,
+        target TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        outcome TEXT NOT NULL
+      )`,
     ]);
   }
 

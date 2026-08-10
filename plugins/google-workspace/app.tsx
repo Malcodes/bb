@@ -20,6 +20,8 @@ type Status = {
   lastError: string | null;
   consecutiveFailures: number;
   reconnectRequired: boolean;
+  scopeUpgradeRequired: boolean;
+  requiredScopes: string[];
   redirectUri: string;
 };
 
@@ -116,6 +118,14 @@ function GoogleSettingsSection() {
         </div>
       )}
 
+      {status.connected && status.scopeUpgradeRequired && (
+        <div role="alert">
+          New permissions are available (Gmail drafts, calendar management).
+          Click <b>Reconnect</b> to grant them — drafts/calendar write tools
+          will fail with a permissions error until then.
+        </div>
+      )}
+
       {status.connected ? (
         <div style={{ display: "grid", gap: "0.5rem" }}>
           <div>
@@ -181,7 +191,43 @@ function GoogleSettingsSection() {
   );
 }
 
+function CalendarChangeApproval({ interaction, submit }: any) {
+  const p = (interaction?.payload ?? {}) as Record<string, any>;
+  const rows: Array<[string, string]> = [];
+  if (p.summary) rows.push(["Event", String(p.summary)]);
+  if (p.email) rows.push(["Person", String(p.email)]);
+  if (p.invitees) rows.push(["Invitees", (p.invitees as string[]).join(", ")]);
+  if (p.attendees) rows.push(["Attendees", (p.attendees as string[]).join(", ")]);
+  if (p.newStart?.dateTime) rows.push(["New start", String(p.newStart.dateTime)]);
+  if (p.newEnd?.dateTime) rows.push(["New end", String(p.newEnd.dateTime)]);
+  if (p.reason) rows.push(["Why", String(p.reason)]);
+  return (
+    <div style={{ display: "grid", gap: "0.75rem" }}>
+      <table>
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label}>
+              <td style={{ opacity: 0.7, paddingRight: "1rem" }}>{label}</td>
+              <td>{value}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <Button onClick={() => submit({ approved: true })}>Approve</Button>
+        <Button variant="outline" onClick={() => submit({ approved: false })}>
+          Decline
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default definePluginApp((app) => {
+  app.slots.pendingInteraction({
+    id: "calendar-change-approval",
+    component: CalendarChangeApproval,
+  });
   app.slots.settingsSection({
     id: "google-account",
     title: "Google account",

@@ -130,11 +130,23 @@ describe("google-workspace read-only agent tools", () => {
       origin: "user",
     } as any);
     expect(config.tools.map((t: any) => t.name).sort()).toEqual([
+      "calendar_add_attendee",
+      "calendar_cancel_event",
+      "calendar_create_event",
+      "calendar_find_free_time",
       "calendar_list_events",
+      "calendar_move_event",
+      "calendar_remove_attendee",
       "calendar_search_events",
+      "calendar_update_event",
+      "gmail_create_draft",
+      "gmail_delete_draft",
+      "gmail_list_drafts",
       "gmail_list_recent",
+      "gmail_read_draft",
       "gmail_read_thread",
       "gmail_search",
+      "gmail_update_draft",
     ]);
   });
 
