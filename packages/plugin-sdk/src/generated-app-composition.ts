@@ -14,7 +14,7 @@ export type NativeCompositionNode =
   | {
       id: string;
       type: "surface";
-      surface: "attention" | "operator";
+      surface: "attention" | "operator" | "drafts";
       chrome?: "card" | "subtle" | "none";
       density?: "compact" | "comfortable" | "spacious";
       emphasis?: "primary" | "normal" | "quiet";

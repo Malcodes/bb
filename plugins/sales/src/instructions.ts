@@ -39,7 +39,7 @@ Views are state-bound projections. Available primitives:
 ## Native composition grammar
 Do not default every tool to a dashboard or vertical module stack. Compose lower-level native nodes around the problem's information architecture:
 - view leaf: {id,type:"view",viewId,chrome?:"card"|"subtle"|"none",density?:"compact"|"comfortable"|"spacious",emphasis?:"primary"|"normal"|"quiet",span?:{base?,md?,lg?}}
-- surface leaf: {id,type:"surface",surface:"attention"|"operator",...same presentation controls}
+- surface leaf: {id,type:"surface",surface:"attention"|"operator"|"drafts",...same presentation controls}
 - stack: {id,type:"stack",gap?,children}
 - grid: {id,type:"grid",columns:1..12,gap?,children}; leaf span controls responsive hierarchy
 - split: {id,type:"split",ratio:"1:1"|"1:2"|"2:1"|"1:3"|"3:1",gap?,children:[left,right]}
@@ -126,6 +126,7 @@ Tools:
 - generated_operations_record_action_outcome: persist success/failure, evidence, goal impact, and follow-up.
 - google_work_execute_claimed_action: execute a previously approved+claimed gmail.send-reply or google-calendar.update-event through an enabled google-work action channel and persist the result.
 - generated_tool_report_attention: surface a semantic attention item (action-proposal, decision, exception, information) with appropriate context. External side effects use action-proposal kind with a linked action from generated_operations_propose_external_action.
+- DRAFTS surface: proposed external actions render in the native DRAFTS surface (composition node {type:"surface",surface:"drafts"}) with full draft content, rationale, and source context. Humans may Approve, Reject, or Comment. A Comment arrives as an unreconciled signal (fingerprint starts with "draft-feedback:") — respond with generated_operations_revise_external_action (new payload + rationale addressing the feedback); revisions invalidate prior approval and return to DRAFTS. Distill recurring feedback into generated_operations_record_drafting_preference (drafting style guidance ONLY — it never changes approval requirements). Never re-propose a new action to "revise" an existing draft; use revise so provenance and idempotency hold.
 - generated_tool_evolve_presentation: within granted presentation permissions, add/update/hide/remove/reorder/resize human-facing modules, change projections/density, consolidate redundant information, and create native decision interactions without touching operational collections or BB runtime code.
 
 Views are presentation projections, not data containers. To remove a section from the rendered app while preserving all underlying rows/history:

@@ -42,6 +42,7 @@ import {
   type Workspace,
 } from "./src/model.js";
 import { ViewRenderer } from "./src/views.js";
+import { DraftsSurface, type DraftAction } from "./src/drafts-surface.js";
 import { safeIcon } from "./src/generated-app.js";
 import { deriveAttentionSummary } from "./src/orchestration.js";
 import { workspaceIdFromDirective } from "./src/workspace-directive.js";
@@ -140,7 +141,37 @@ function useWorkspace(workspaceId: string) {
     [rpc, workspace, workspaceId],
   );
 
-  return { workspace, error, mutate, setPinned, resolveAttentionItem };
+  const commentOnExternalAction = useCallback(
+    (actionId: string, comment: string) => {
+      if (!workspace) return;
+      rpc
+        .call("commentOnExternalAction", { workspaceId, actionId, comment })
+        .then((next) => {
+          setWorkspace(next);
+          setError(null);
+        })
+        .catch((reason: unknown) => {
+          setError(reason instanceof Error ? reason.message : String(reason));
+        });
+    },
+    [rpc, workspace, workspaceId],
+  );
+
+  return {
+    workspace,
+    error,
+    mutate,
+    setPinned,
+    resolveAttentionItem,
+    commentOnExternalAction,
+  };
+}
+
+/** Prepared consequential actions awaiting a human decision, live-bound. */
+export function pendingDraftActions(workspace: Workspace): DraftAction[] {
+  return ((workspace.autonomy?.externalActions ?? []) as DraftAction[]).filter(
+    (action) => action.status === "proposed",
+  );
 }
 
 const MODULE_MIN_HEIGHT = 280;
@@ -622,6 +653,7 @@ function NativeComposition({
   workspace,
   mutate,
   resolveAttentionItem,
+  commentOnExternalAction,
 }: {
   workspace: Workspace;
   mutate(mutations: Mutation[]): void;
@@ -629,6 +661,7 @@ function NativeComposition({
     id: string,
     decision: "approved" | "rejected" | "resolved",
   ): void;
+  commentOnExternalAction(actionId: string, comment: string): void;
 }) {
   const render = (node: NativeCompositionNode): ReactNode => {
     if (node.type === "view") {
@@ -655,6 +688,21 @@ function NativeComposition({
         <NativeFrame key={node.id} node={node}>
           {node.surface === "attention" ? (
             <AttentionSummary workspace={workspace} />
+          ) : node.surface === "drafts" ? (
+            <DraftsSurface
+              actions={pendingDraftActions(workspace)}
+              onDecide={(actionId, decision) => {
+                // Draft decisions go through the linked attention item so
+                // approval state stays authoritative in one place.
+                const item = workspace.autonomy?.attentionItems.find(
+                  (candidate) =>
+                    candidate.externalActionId === actionId &&
+                    candidate.status === "open",
+                );
+                if (item) resolveAttentionItem(item.id, decision);
+              }}
+              onComment={commentOnExternalAction}
+            />
           ) : (
             <AttentionSurface
               workspace={workspace}
@@ -752,7 +800,14 @@ function WorkspaceSurface({
   workspaceId: string;
   fullWidth?: boolean;
 }) {
-  const { workspace, error, mutate, setPinned, resolveAttentionItem } =
+  const {
+    workspace,
+    error,
+    mutate,
+    setPinned,
+    resolveAttentionItem,
+    commentOnExternalAction,
+  } =
     useWorkspace(workspaceId);
   const moduleSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -895,6 +950,7 @@ function WorkspaceSurface({
             workspace={workspace}
             mutate={mutate}
             resolveAttentionItem={resolveAttentionItem}
+            commentOnExternalAction={commentOnExternalAction}
           />
         ) : (
           <div className="flex min-w-0 flex-col gap-2.5">

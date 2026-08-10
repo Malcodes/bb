@@ -109,6 +109,8 @@ export type GeneratedToolAutonomyState = {
   outcomes: GeneratedOutcomeEvaluation[];
   sources: GeneratedToolSourceBinding[];
   signals: GeneratedToolSignal[];
+  /** Bounded drafting-style guidance learned from human comments. */
+  draftingPreferences?: GeneratedDraftingPreference[];
   runs: GeneratedToolAutonomyRun[];
   attentionItems: GeneratedAttentionItem[];
   /**
@@ -356,6 +358,29 @@ export type GeneratedOpportunity = {
   updatedAt: string;
 };
 
+/**
+ * One immutable draft revision of an external action. Execution always uses
+ * the CURRENT revision's payload; a revision bump resets status to proposed
+ * and clears approvedAt, so approving revision N never authorizes N+1.
+ */
+export type GeneratedExternalActionRevision = {
+  revision: number;
+  payload: Record<string, string>;
+  payloadSummary: string;
+  rationale: string;
+  revisedBy: "agent" | "human";
+  /** The human feedback this revision responds to, when revised. */
+  comment?: string;
+  createdAt: string;
+};
+
+export type GeneratedExternalActionComment = {
+  text: string;
+  at: string;
+  /** Revision the comment applied to. */
+  onRevision: number;
+};
+
 export type GeneratedExternalAction = {
   id: string;
   idempotencyKey: string;
@@ -376,12 +401,31 @@ export type GeneratedExternalAction = {
     | "succeeded"
     | "failed";
   createdAt: string;
+  /** Current revision; revisions[revisions.length-1] is authoritative. */
+  revision?: number;
+  revisions?: GeneratedExternalActionRevision[];
+  /** Preserved human feedback history, oldest first. */
+  comments?: GeneratedExternalActionComment[];
+  updatedAt?: string;
   approvedAt?: string;
   executionStartedAt?: string;
   completedAt?: string;
   attempts: number;
   lastError?: string;
   outcome?: string;
+};
+
+/**
+ * Bounded drafting-style guidance distilled from human draft comments.
+ * Guidance ONLY: it may steer how future drafts are written and must never
+ * widen execution authority or weaken approval requirements.
+ */
+export type GeneratedDraftingPreference = {
+  id: string;
+  guidance: string;
+  actionType?: string;
+  learnedAt: string;
+  sourceComment?: string;
 };
 
 export type GeneratedOutcomeEvaluation = {

@@ -307,6 +307,21 @@ const opportunitySchema = z.object({
   discoveredAt: z.string(),
   updatedAt: z.string(),
 });
+/**
+ * One immutable draft revision of an external action. Execution always uses
+ * the CURRENT revision's payload; approving revision N does not approve N+1
+ * (revision bumps reset status to proposed and clear approvedAt).
+ */
+const externalActionRevisionSchema = z.object({
+  revision: z.number().int().min(1),
+  payload: z.record(z.string(), z.string()),
+  payloadSummary: z.string(),
+  rationale: z.string(),
+  revisedBy: z.enum(["agent", "human"]),
+  /** The human feedback this revision responds to, when revised. */
+  comment: z.string().optional(),
+  createdAt: z.string(),
+});
 const externalActionSchema = z.object({
   id: z.string(),
   idempotencyKey: z.string(),
@@ -326,7 +341,23 @@ const externalActionSchema = z.object({
     "succeeded",
     "failed",
   ]),
+  /** Current revision number; revisions[revisions.length-1] is authoritative. */
+  revision: z.number().int().min(1).optional(),
+  revisions: z.array(externalActionRevisionSchema).optional(),
+  /** Preserved human feedback history, oldest first. */
+  comments: z
+    .array(
+      z.object({
+        text: z.string(),
+        at: z.string(),
+        /** Revision the comment applied to. */
+        onRevision: z.number().int().min(1),
+      })
+      .strict(),
+    )
+    .optional(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
   approvedAt: z.string().optional(),
   executionStartedAt: z.string().optional(),
   completedAt: z.string().optional(),
@@ -398,6 +429,25 @@ const autonomyStateSchema = z.object({
   externalActions: z.array(externalActionSchema),
   outcomes: z.array(outcomeSchema),
   sources: z.array(sourceBindingSchema),
+  /**
+   * Bounded drafting-style guidance distilled from human comments. Guidance
+   * ONLY: it may steer future draft style, never execution authority —
+   * nothing here weakens approval requirements.
+   */
+  draftingPreferences: z
+    .array(
+      z
+        .object({
+          id: z.string(),
+          guidance: z.string().max(500),
+          actionType: z.string().optional(),
+          learnedAt: z.string(),
+          sourceComment: z.string().max(500).optional(),
+        })
+        .strict(),
+    )
+    .max(50)
+    .optional(),
   signals: z.array(autonomySignalSchema),
   runs: z.array(autonomyRunSchema),
   attentionItems: z.array(attentionItemSchema),
@@ -408,6 +458,24 @@ export const nativeCompositionNodeSchema: z.ZodType<
   import("./model.js").NativeCompositionNode
 > = z.lazy(() =>
   z.discriminatedUnion("type", [
+    z
+      .object({
+        id: z.string().min(1),
+        type: z.literal("surface"),
+        surface: z.enum(["attention", "operator", "drafts"]),
+        chrome: z.enum(["card", "subtle", "none"]).optional(),
+        density: z.enum(["compact", "comfortable", "spacious"]).optional(),
+        emphasis: z.enum(["primary", "normal", "quiet"]).optional(),
+        span: z
+          .object({
+            base: z.number().int().min(1).max(12).optional(),
+            md: z.number().int().min(1).max(12).optional(),
+            lg: z.number().int().min(1).max(12).optional(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict(),
     z
       .object({
         id: z.string().min(1),

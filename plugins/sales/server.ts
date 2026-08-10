@@ -189,6 +189,16 @@ export const salesRpcContract = defineRpcContract({
       .strict(),
     output: workspaceSchema.strict(),
   },
+  commentOnExternalAction: {
+    input: z
+      .object({
+        workspaceId: z.string().min(1),
+        actionId: z.string().min(1),
+        comment: z.string().min(1).max(2000),
+      })
+      .strict(),
+    output: workspaceSchema.strict(),
+  },
 });
 
 export interface SalesPluginOptions {
@@ -1318,6 +1328,18 @@ export default async function plugin(
             rationale: input.rationale,
             evidence: input.evidence,
             status: "proposed" as const,
+            revision: 1,
+            revisions: [
+              {
+                revision: 1,
+                payload: input.payload,
+                payloadSummary: input.payloadSummary,
+                rationale: input.rationale,
+                revisedBy: "agent" as const,
+                createdAt: new Date().toISOString(),
+              },
+            ],
+            comments: [],
             createdAt: new Date().toISOString(),
             attempts: 0,
           };
@@ -1341,6 +1363,106 @@ export default async function plugin(
       return JSON.stringify(toJson(action));
     },
   });
+  bb.agents.registerTool({
+    name: "generated_operations_revise_external_action",
+    description:
+      "Revise a proposed external action after human feedback. Creates a new immutable revision (payload + rationale), preserves history, and returns the draft to the approval queue. A revision INVALIDATES any prior approval: the new revision requires fresh human approval before it can be claimed or executed.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        actionId: z.string().min(1),
+        payload: z.record(z.string(), z.string()),
+        payloadSummary: z.string().min(1).max(500),
+        rationale: z.string().min(1).max(2000),
+        /** The human comment being addressed. */
+        respondingTo: z.string().max(2000).optional(),
+      })
+      .strict(),
+    async execute(input) {
+      const updated = await updateWorkspace(input.workspaceId, (workspace) => {
+            const action = autonomy(workspace).externalActions.find(
+              (item) => item.id === input.actionId,
+            );
+            if (!action) {
+              throw new Error(`external action not found: ${input.actionId}`);
+            }
+            if (!["proposed", "approved", "rejected"].includes(action.status)) {
+              throw new Error(
+                `cannot revise an action in status ${action.status} (executing/terminal actions are immutable)`,
+              );
+            }
+            const now = new Date().toISOString();
+            const nextRevision = (action.revision ?? 1) + 1;
+            action.revision = nextRevision;
+            action.revisions = [
+              ...(action.revisions ?? []),
+              {
+                revision: nextRevision,
+                payload: input.payload,
+                payloadSummary: input.payloadSummary,
+                rationale: input.rationale,
+                revisedBy: "agent" as const,
+                comment: input.respondingTo,
+                createdAt: now,
+              },
+            ].slice(-20);
+            action.payload = input.payload;
+            action.payloadSummary = input.payloadSummary;
+            action.rationale = input.rationale;
+            action.status = "proposed";
+            action.approvedAt = undefined;
+            action.updatedAt = now;
+            const item = autonomy(workspace).attentionItems.find(
+              (candidate) => candidate.externalActionId === action.id,
+            );
+            if (item) {
+              item.status = "open";
+              item.resolvedAt = undefined;
+            }
+          });
+      return JSON.stringify(
+        toJson(
+          autonomy(updated).externalActions.find(
+            (item) => item.id === input.actionId,
+          ),
+        ),
+      );
+    },
+  });
+
+  bb.agents.registerTool({
+    name: "generated_operations_record_drafting_preference",
+    description:
+      "Distill a human draft comment into bounded drafting-style guidance for FUTURE drafts (tone, length, what to mention/avoid). This never changes autonomy policy, approval requirements, or execution authority — it only improves how future drafts are written.",
+    parameters: z
+      .object({
+        workspaceId: z.string().min(1),
+        guidance: z.string().min(1).max(500),
+        actionType: z.string().max(120).optional(),
+        sourceComment: z.string().max(500).optional(),
+      })
+      .strict(),
+    async execute(input) {
+      return JSON.stringify(
+        toJson(
+          await updateWorkspace(input.workspaceId, (workspace) => {
+            const state = autonomy(workspace);
+            state.draftingPreferences = [
+              {
+                id: newId("pref"),
+                guidance: input.guidance,
+                actionType: input.actionType,
+                learnedAt: new Date().toISOString(),
+                sourceComment: input.sourceComment,
+              },
+              ...(state.draftingPreferences ?? []),
+            ].slice(0, 50);
+          }),
+        ),
+      );
+    },
+  });
+
   bb.agents.registerTool({
     name: "generated_operations_claim_approved_action",
     description:
@@ -1368,7 +1490,10 @@ export default async function plugin(
         }
         if (action.status !== "approved")
           throw new Error(
-            `external action cannot be claimed from status ${action.status}`,
+            `external action cannot be claimed from status ${action.status}` +
+              (action.revision && action.revisions
+                ? ` (revision ${action.revision}; approval is only valid for the revision it was granted on)`
+                : ""),
           );
         action.status = "executing";
         action.executionStartedAt = new Date().toISOString();
@@ -1658,6 +1783,8 @@ export default async function plugin(
       "generated_operations_upsert_entity",
       "generated_operations_upsert_opportunity",
       "generated_operations_propose_external_action",
+      "generated_operations_revise_external_action",
+      "generated_operations_record_drafting_preference",
       "generated_operations_claim_approved_action",
       "generated_operations_record_action_outcome",
       "google_work_execute_claimed_action",
@@ -1797,6 +1924,61 @@ export default async function plugin(
               `decision "${decision}" is not valid for attention item kind "${item.kind}"`,
             );
           }
+        }),
+      );
+    },
+    async commentOnExternalAction({ workspaceId, actionId, comment }) {
+      // Comment → return to the responsible agent for revision. Preserves
+      // feedback, invalidates any prior approval state implicitly (the
+      // action must still be proposed/approved, never executing/terminal),
+      // and re-queues it in DRAFTS. Never executes anything.
+      return toJson(
+        await updateWorkspace(workspaceId, (workspace) => {
+          const state = autonomy(workspace);
+          const action = state.externalActions.find(
+            (candidate) => candidate.id === actionId,
+          );
+          if (!action) {
+            throw new Error(`external action not found: ${actionId}`);
+          }
+          if (!["proposed", "approved", "rejected"].includes(action.status)) {
+            throw new Error(
+              `cannot comment on an action in status ${action.status}`,
+            );
+          }
+          const now = new Date().toISOString();
+          action.comments = [
+            ...(action.comments ?? []),
+            { text: comment, at: now, onRevision: action.revision ?? 1 },
+          ].slice(-20);
+          // A comment sends the draft back for revision: any prior approval
+          // no longer authorizes execution of a future revision.
+          action.status = "proposed";
+          action.approvedAt = undefined;
+          action.updatedAt = now;
+          const item = state.attentionItems.find(
+            (candidate) => candidate.externalActionId === actionId,
+          );
+          if (item) {
+            item.status = "open";
+            item.resolvedAt = undefined;
+          }
+          // Note for the next operator cycle: revision work is pending.
+          state.signals.unshift({
+            id: newId("sig"),
+            targetWorkspaceIds: [workspaceId],
+            entityRefs: [],
+            sourceBindingId: "drafts:human-feedback",
+            sourceKind: "custom",
+            fingerprint: `draft-feedback:${actionId}:${now}`,
+            observedAt: now,
+            title: `Revise draft: ${action.title}`,
+            summary: `Human feedback on revision ${action.revision ?? 1}: "${comment.slice(0, 200)}". Revise the draft via generated_operations_revise_external_action; it returns to DRAFTS requiring fresh approval.`,
+            evidence: action.evidence.slice(0, 5),
+            context: comment,
+            attention: "response-needed",
+          });
+          state.signals = state.signals.slice(0, 200);
         }),
       );
     },
